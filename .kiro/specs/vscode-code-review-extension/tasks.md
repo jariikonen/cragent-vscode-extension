@@ -16,12 +16,12 @@
   - [x] 2.5 Write property-based test for **Property 10 — Severity Threshold Mapping**: generate `fc.float({ min: 0, max: 1 })` values, assert `mapSeverity` returns the correct `DiagnosticSeverity` per threshold; also generate out-of-range values and assert they are clamped before mapping. Tag: `// Feature: vscode-code-review-extension, Property 10: Severity Threshold Mapping`. Validates: Requirements 3.3, 4.2
   - [x] 2.6 Verify: `npx vitest run test/unit/Finding.test.ts test/property/Finding.property.test.ts` passes all tests
 
-- [ ] 3. Configuration management
-  - [ ] 3.1 Create `src/config/ConfigurationManager.ts` implementing the `ConfigurationManager` interface: `getConfig()` reads all `codeReview.*` workspace settings and returns a typed `ExtensionConfig` object; `getAuthToken()` reads from `vscode.ExtensionContext.secrets` under key `codeReview.authToken`; `setAuthToken(token)` writes to `SecretStorage`; `onDidChangeConfig(listener)` wraps `vscode.workspace.onDidChangeConfiguration`; `isLocalAddress(url)` returns `true` for hostnames `localhost`, `127.0.0.1`, and `::1`
-  - [ ] 3.2 Write unit tests in `test/unit/ConfigurationManager.test.ts` covering: `isLocalAddress` returns `true` for all three local hostnames and `false` for a remote hostname, `getConfig` returns correct defaults when no settings are overridden (mock `vscode.workspace.getConfiguration`)
-  - [ ] 3.3 Write property-based test for **Property 8 — URL Validation Correctness**: generate strings with `fc.oneof(fc.webUrl(), fc.string())`, assert the validator accepts valid WHATWG URLs and rejects all others. Tag: `// Feature: vscode-code-review-extension, Property 8: URL Validation Correctness`. Validates: Requirements 6.2
-  - [ ] 3.4 Verify: `npx vitest run test/unit/ConfigurationManager.test.ts test/property/` passes; manually confirm `codeReview.*` settings appear in VS Code Settings UI after `npm run compile`
-  - [ ] 3.5 Commit: `git add src/config/ test/unit/ConfigurationManager.test.ts test/property/ && git commit -m "feat(config): implement ConfigurationManager with settings and auth token management
+- [x] 3. Configuration management
+  - [x] 3.1 Create `src/config/ConfigurationManager.ts` implementing the `ConfigurationManager` interface: `getConfig()` reads all `codeReview.*` workspace settings and returns a typed `ExtensionConfig` object; `getAuthToken()` reads from `vscode.ExtensionContext.secrets` under key `codeReview.authToken`; `setAuthToken(token)` writes to `SecretStorage`; `onDidChangeConfig(listener)` wraps `vscode.workspace.onDidChangeConfiguration`; `isLocalAddress(url)` returns `true` for hostnames `localhost`, `127.0.0.1`, and `::1`
+  - [x] 3.2 Write unit tests in `test/unit/ConfigurationManager.test.ts` covering: `isLocalAddress` returns `true` for all three local hostnames and `false` for a remote hostname, `getConfig` returns correct defaults when no settings are overridden (mock `vscode.workspace.getConfiguration`)
+  - [x] 3.3 Write property-based test for **Property 8 — URL Validation Correctness**: generate strings with `fc.oneof(fc.webUrl(), fc.string())`, assert the validator accepts valid WHATWG URLs and rejects all others. Tag: `// Feature: vscode-code-review-extension, Property 8: URL Validation Correctness`. Validates: Requirements 6.2
+  - [x] 3.4 Verify: `npx vitest run test/unit/ConfigurationManager.test.ts test/property/` passes; manually confirm `codeReview.*` settings appear in VS Code Settings UI after `npm run compile`
+  - [x] 3.5 Commit: `git add src/config/ test/unit/ConfigurationManager.test.ts test/property/ && git commit -m "feat(config): implement ConfigurationManager with settings and auth token management
 
 - Add ConfigurationManager interface implementation for reading codeReview.* settings
 - Implement getConfig() to return typed ExtensionConfig object
@@ -36,14 +36,13 @@
   - [ ] 4.1 Create `src/ui/OutputChannelLogger.ts` implementing a logger that wraps `vscode.window.createOutputChannel("Code Review")`; expose `log(level: 'info'|'warn'|'error', message: string, context?: object)` which writes lines prefixed with an ISO 8601 timestamp and level; expose `show()` to reveal the channel; implement `dispose()`
   - [ ] 4.2 Write unit tests in `test/unit/OutputChannelLogger.test.ts` covering: log lines include ISO 8601 timestamp prefix, log lines include the level string, `show()` calls the underlying channel's `show()` method (mock the `vscode.OutputChannel`)
   - [ ] 4.3 Verify: `npx vitest run test/unit/OutputChannelLogger.test.ts` passes
-  - [ ] 4.4 Commit: `git add src/ui/OutputChannelLogger.ts test/unit/OutputChannelLogger.test.ts && git commit -m "feat(logging): implement OutputChannelLogger for structured logging
+  - [ ] 4.4 Commit: `git add src/ui/ test/unit/OutputChannelLogger.test.ts && git commit -m "feat(logging): implement OutputChannelLogger with ISO 8601 timestamps
 
 - Add OutputChannelLogger wrapping vscode.window.createOutputChannel
-- Implement log() method with ISO 8601 timestamp prefix and level indicators
-- Support info/warn/error log levels with optional context objects
-- Add show() method to reveal output channel
-- Implement dispose() for proper cleanup
-- Add unit tests verifying timestamp format, level strings, and show() behavior
+- Implement log() method with level-based logging (info/warn/error)
+- Add ISO 8601 timestamp prefix to all log entries
+- Implement show() to reveal output channel and dispose() for cleanup
+- Add unit tests for timestamp formatting, level inclusion, and show() method
 - All tests passing"`
 
 - [ ] 5. MCP connection layer
@@ -52,16 +51,15 @@
   - [ ] 5.3 Write unit tests in `test/unit/ConnectionManager.test.ts` covering: successful connect sets `isConnected = true`, failed connect triggers retry sequence with correct delay values (mock timers), all 3 retries exhausted shows error notification, `disconnect()` sets `isConnected = false`
   - [ ] 5.4 Write property-based test for **Property 9 — Remote Address Authentication**: generate non-local hostnames (using `fc.domain()` filtered to exclude `localhost`, `127.0.0.1`, `::1`) and random token strings, assert the `Authorization: Bearer <token>` header is present; generate local hostnames and assert no `Authorization` header is added. Tag: `// Feature: vscode-code-review-extension, Property 9: Remote Address Authentication`. Validates: Requirements 1.3, 1.4
   - [ ] 5.5 Verify: `npx vitest run test/unit/ConnectionManager.test.ts test/property/` passes
-  - [ ] 5.6 Commit: `git add src/connection/ test/unit/ConnectionManager.test.ts test/property/ && git commit -m "feat(connection): implement MCP client with authentication and retry logic
+  - [ ] 5.6 Commit: `git add src/connection/ test/unit/ConnectionManager.test.ts test/property/ && git commit -m "feat(connection): implement MCP connection layer with retry logic
 
 - Add MCPClient wrapper around @modelcontextprotocol/sdk with StreamableHTTPClientTransport
 - Implement connect(), disconnect(), callTool() methods and isConnected property
-- Add conditional Authorization Bearer token header for remote (non-local) addresses
+- Add conditional Authorization Bearer token header for remote addresses
 - Implement ConnectionManager with exponential backoff retry (1s, 2s, 4s delays)
 - Add onDidChangeConnection event emitter for connection state changes
-- Show VS Code error notification after all retry attempts exhausted
-- Add unit tests for connection lifecycle, retry sequence, and state transitions
-- Add Property 9 test for remote address authentication with Bearer tokens
+- Add unit tests for connection lifecycle and retry sequence with mocked timers
+- Add Property 9 test for remote address authentication header logic
 - All tests passing"`
 
 - [ ] 6. File transfer service
@@ -71,29 +69,27 @@
   - [ ] 6.4 Verify: `npx vitest run test/unit/FileTransferService.test.ts test/property/` passes
   - [ ] 6.5 Commit: `git add src/review/FileTransferService.ts test/unit/FileTransferService.test.ts test/property/ && git commit -m "feat(review): implement FileTransferService with incremental sync
 
-- Add FileTransferService for querying index timestamps and building file payloads
+- Add FileTransferService for workspace file enumeration and transfer
 - Implement queryIndexTimestamp() to retrieve server-side index timestamp
 - Implement buildFilePayloads() with timestamp-based filtering (lastModified > sinceTimestamp)
 - Add transferFilesParallel() using Promise.all for concurrent file transfers
-- Support null timestamp to include all files (full sync)
-- Add unit tests for timestamp filtering logic and edge cases
-- Add Property 3 test for incremental sync correctness
+- Add unit tests for null timestamp (all files), non-null timestamp (filtered), and boundary conditions
+- Add Property 3 test for incremental sync correctness with random timestamps
 - All tests passing"`
 
 - [ ] 7. Review session management
   - [ ] 7.1 Create `src/review/ReviewSessionManager.ts` implementing `ReviewSessionManager`; `startSession(scope)` creates a `ReviewSession` with a unique `id` and `CancellationTokenSource`; if a session already exists for the same URI, cancels it before starting the new one; calls `FileTransferService` to send files and then calls the MCP review tool; shows a VS Code progress notification while the session runs; on completion calls `FindingDisplayManager.applyFindings`; on cancellation or error, logs to `OutputChannelLogger` and shows appropriate notification
   - [ ] 7.2 Write unit tests in `test/unit/ReviewSessionManager.test.ts` covering: starting a session for a URI that has no active session creates a new session, starting a session for a URI with an existing active session cancels the old session first, `cancelSession(uri)` cancels the session for that URI, `cancelSession()` with no argument cancels all active sessions
   - [ ] 7.3 Verify: `npx vitest run test/unit/ReviewSessionManager.test.ts` passes
-  - [ ] 7.4 Commit: `git add src/review/ReviewSessionManager.ts test/unit/ReviewSessionManager.test.ts && git commit -m "feat(review): implement ReviewSessionManager with session lifecycle management
+  - [ ] 7.4 Commit: `git add src/review/ReviewSessionManager.ts test/unit/ReviewSessionManager.test.ts && git commit -m "feat(review): implement ReviewSessionManager with session orchestration
 
-- Add ReviewSessionManager for orchestrating code review sessions
+- Add ReviewSessionManager for review session lifecycle management
 - Implement startSession() with unique session IDs and CancellationTokenSource
-- Add automatic cancellation of existing sessions before starting new ones for same URI
-- Integrate FileTransferService for file submission and MCP review tool invocation
-- Show VS Code progress notifications during active review sessions
-- Call FindingDisplayManager.applyFindings() on session completion
-- Add error handling with OutputChannelLogger integration and user notifications
+- Add single-session-per-file enforcement (cancel existing before starting new)
+- Integrate FileTransferService for file transfers and MCP review tool invocation
+- Add VS Code progress notification during active sessions
 - Implement cancelSession() for single URI and all sessions
+- Add error handling with OutputChannelLogger integration
 - Add unit tests for session creation, cancellation, and replacement logic
 - All tests passing"`
 
@@ -105,11 +101,10 @@
 
 - Add DiagnosticCollection wrapping vscode.languages.createDiagnosticCollection
 - Implement setFindings() to convert Finding objects to vscode.Diagnostic entries
-- Use mapSeverity() for correct severity level mapping (Information/Warning/Error)
-- Map 0-indexed line ranges and finding messages to diagnostic properties
-- Implement clearUri() for single file and clearAll() for workspace-wide clearing
-- Add dispose() for proper resource cleanup
-- Add unit tests verifying diagnostic creation, range/severity mapping, and clearing
+- Use mapSeverity() for severity threshold mapping (Information/Warning/Error)
+- Add clearUri() for single-file clearing and clearAll() for workspace clearing
+- Implement dispose() for cleanup
+- Add unit tests for diagnostic creation, range/severity mapping, and clearing operations
 - All tests passing"`
 
 - [ ] 9. Finding display — inline comments
@@ -117,17 +112,16 @@
   - [ ] 9.2 Write unit tests in `test/unit/CommentController.test.ts` covering: `setFindings` creates one thread per finding, thread range matches finding line numbers, first comment body equals `finding.message`, label matches the score format pattern, suggestion reply is present when `finding.suggestion` is defined and absent when it is not, `dismissThread` disposes the thread (mock `vscode.comments`)
   - [ ] 9.3 Write property-based test for **Property 7 — Comment Content Fidelity**: generate arbitrary `Finding` objects with optional `suggestion` fields, apply to `CommentController`, assert first comment body equals `finding.message`, label matches `"P: X.XX | S: X.XX | C: X.XX | I: X.XX"` with correct values, suggestion reply present iff `finding.suggestion` is defined. Tag: `// Feature: vscode-code-review-extension, Property 7: Comment Content Fidelity`. Validates: Requirements 5.2, 5.3
   - [ ] 9.4 Verify: `npx vitest run test/unit/CommentController.test.ts test/property/` passes
-  - [ ] 9.5 Commit: `git add src/display/CommentController.ts test/unit/CommentController.test.ts test/property/ && git commit -m "feat(display): implement CommentController for inline review threads
+  - [ ] 9.5 Commit: `git add src/display/CommentController.ts test/unit/CommentController.test.ts test/property/ && git commit -m "feat(display): implement CommentController for inline comment threads
 
 - Add CommentController wrapping vscode.comments.createCommentController
-- Implement setFindings() to create CommentThread per finding at correct line range
-- Set contextValue to 'codeReviewFinding' for context menu integration
-- Format comment labels as 'P: X.XX | S: X.XX | C: X.XX | I: X.XX' with 2 decimal places
+- Implement setFindings() to create CommentThread per finding with correct range
+- Add contextValue 'codeReviewFinding' for context menu integration
+- Format comment label as 'P: X.XX | S: X.XX | C: X.XX | I: X.XX' with 2 decimal places
 - Add optional suggestion reply comment when finding.suggestion is present
-- Implement clearUri(), clearAll(), and dismissThread() for thread management
-- Add dispose() for proper resource cleanup
-- Add unit tests for thread creation, label formatting, and suggestion handling
-- Add Property 7 test for comment content fidelity
+- Implement clearUri(), clearAll(), and dismissThread() methods
+- Add unit tests for thread creation, range mapping, label formatting, and suggestion handling
+- Add Property 7 test for comment content fidelity with optional suggestions
 - All tests passing"`
 
 - [ ] 10. FindingDisplayManager coordination
@@ -139,21 +133,19 @@
   - [ ] 10.6 Write property-based test for **Property 11 — Sort Order Correctness**: generate a list of `Finding` objects with random scores and a random sort field, apply `updateSortFilter`, assert the resulting display order is non-increasing on the chosen score field. Tag: `// Feature: vscode-code-review-extension, Property 11: Sort Order Correctness`. Validates: Requirements 8.1
   - [ ] 10.7 Write property-based test for **Property 12 — Filter Threshold Correctness**: generate a list of `Finding` objects with random scores and random minimum thresholds, apply `updateSortFilter`, assert displayed findings are exactly those where all four scores meet or exceed their thresholds. Tag: `// Feature: vscode-code-review-extension, Property 12: Filter Threshold Correctness`. Validates: Requirements 8.2
   - [ ] 10.8 Verify: `npx vitest run test/unit/FindingDisplayManager.test.ts test/property/` passes all tests
-  - [ ] 10.9 Commit: `git add src/display/FindingDisplayManager.ts test/unit/FindingDisplayManager.test.ts test/property/ && git commit -m "feat(display): implement FindingDisplayManager for coordinated display control
+  - [ ] 10.9 Commit: `git add src/display/FindingDisplayManager.ts test/unit/FindingDisplayManager.test.ts test/property/ && git commit -m "feat(display): implement FindingDisplayManager with sort/filter coordination
 
 - Add FindingDisplayManager coordinating CommentController and DiagnosticCollection
-- Implement applyFindings() with sort/filter logic before delegating to both displays
-- Support sorting by priority/severity/confidence/importance in descending order
-- Implement filtering by minimum threshold values for all four score fields
-- Add clearFindings() and clearAllFindings() delegating to both displays
-- Implement dismissThread() for individual thread dismissal
-- Add updateSortFilter() to re-apply options to all URIs without new review session
-- Add unit tests for delegation, sorting, filtering, and state management
+- Implement applyFindings() with sort/filter logic applied to both display surfaces
+- Add clearFindings() and clearAllFindings() delegating to both controllers
+- Implement updateSortFilter() to re-apply options to all URIs without new session
+- Add dismissThread() delegating to CommentController
+- Add unit tests for delegation, sort/filter application, and multi-URI coordination
 - Add Property 4 test for information finding filter (severity <= 0.33)
-- Add Property 5 test for diagnostic-comment consistency
+- Add Property 5 test for diagnostic-comment consistency across both surfaces
 - Add Property 6 test for session replacement idempotence
-- Add Property 11 test for sort order correctness
-- Add Property 12 test for filter threshold correctness
+- Add Property 11 test for sort order correctness (descending by chosen field)
+- Add Property 12 test for filter threshold correctness (all scores meet thresholds)
 - All tests passing"`
 
 - [ ] 11. Status bar
@@ -162,13 +154,12 @@
   - [ ] 11.3 Verify: `npx vitest run test/unit/StatusBarManager.test.ts` passes
   - [ ] 11.4 Commit: `git add src/ui/StatusBarManager.ts test/unit/StatusBarManager.test.ts && git commit -m "feat(ui): implement StatusBarManager for connection status display
 
-- Add StatusBarManager wrapping vscode.window.createStatusBarItem
+- Add StatusBarManager wrapping vscode.StatusBarItem with left alignment
 - Implement setConnected() with check icon and server URL tooltip
-- Implement setDisconnected() with X icon
+- Implement setDisconnected() with x icon
 - Implement setReviewing() with spinning sync icon
-- Set alignment to Left and make item always visible
-- Add dispose() for proper resource cleanup
-- Add unit tests verifying text, tooltip, and icon updates for all states
+- Add dispose() for cleanup and show() in constructor for visibility
+- Add unit tests for text/tooltip updates and disposal
 - All tests passing"`
 
 - [ ] 12. VS Code commands wiring
@@ -184,20 +175,13 @@
   - [ ] 12.3 Verify: `npm run compile` succeeds with no errors; open the Extension Development Host (`F5`) and confirm all 7 commands appear in the Command Palette under "Code Review"
   - [ ] 12.4 Commit: `git add src/extension.ts package.json && git commit -m "feat(extension): wire all services and commands in activate()
 
-- Instantiate all services in activate(): OutputChannelLogger, ConfigurationManager, MCPClient, ConnectionManager, FileTransferService, ReviewSessionManager, DiagnosticCollection, CommentController, FindingDisplayManager, StatusBarManager
+- Instantiate all services in activate() with proper dependency injection
 - Wire ConnectionManager.onDidChangeConnection to StatusBarManager for status updates
-- Register 7 commands in package.json contributes.commands and extension.ts:
-  - codeReview.reviewFile for current file review
-  - codeReview.reviewSelection for selection review
-  - codeReview.reviewWorkspace for workspace review
-  - codeReview.clearFindings to clear all findings
-  - codeReview.dismissThread for individual thread dismissal
-  - codeReview.setAuthToken for authentication token configuration
-  - codeReview.openOutputChannel to show output channel
-- Push all disposables to context.subscriptions for proper cleanup
-- Call ConnectionManager.connect() on activation
-- Show one-time auth warning for remote URLs without token
-- Compilation succeeds with no TypeScript errors"`
+- Register 7 commands: reviewFile, reviewSelection, reviewWorkspace, clearFindings, dismissThread, setAuthToken, openOutputChannel
+- Add command contributions to package.json with proper titles and context menus
+- Push all disposables to context.subscriptions for cleanup
+- Add initial connection attempt and remote auth token warning
+- Verify all commands appear in Command Palette"`
 
 - [ ] 13. Integration tests
   - [ ] 13.1 Create `test/integration/connection.test.ts`: start an in-process mock HTTP MCP server in `beforeAll`; test full connection lifecycle (connect → call tool → disconnect); verify `ConnectionManager.isConnected` transitions correctly
@@ -207,14 +191,10 @@
   - [ ] 13.5 Verify: `npx vitest run test/integration/` passes all integration tests
   - [ ] 13.6 Commit: `git add test/integration/ && git commit -m "test(integration): add integration tests for MCP connection and file transfer
 
-- Add connection.test.ts for full connection lifecycle testing with mock MCP server
-- Test connect → call tool → disconnect flow and isConnected state transitions
-- Add fileTransfer.test.ts for incremental sync with index timestamps
-- Verify timestamp-based filtering (null vs non-null timestamp scenarios)
-- Add parallelTransfer.test.ts for concurrent file transfer verification
-- Verify Promise.all concurrency by checking mock server receipt order
-- Add reconnection.test.ts for exponential backoff retry logic
-- Simulate server drop and verify 3 retry attempts with 1s, 2s, 4s delays
+- Add connection.test.ts for full connection lifecycle with mock HTTP MCP server
+- Add fileTransfer.test.ts for incremental sync with null and non-null timestamps
+- Add parallelTransfer.test.ts to verify Promise.all concurrency with receipt timestamps
+- Add reconnection.test.ts for exponential backoff retry logic (1s, 2s, 4s delays)
 - All integration tests passing"`
 
 - [ ]* 14. E2E extension tests
@@ -224,11 +204,11 @@
   - [ ]* 14.4 Create `test/extension/clear.test.ts`: after populating findings, invoke `codeReview.clearFindings`; assert both diagnostics and comment threads are empty
   - [ ]* 14.5 Create `test/extension/statusBar.test.ts`: assert the status bar item text changes to the connected state after activation and to the reviewing state during an active session
   - [ ]* 14.6 Verify: `npm run test:extension` passes all E2E tests inside the Extension Development Host
-  - [ ]* 14.7 Commit: `git add test/extension/ && git commit -m "test(e2e): add end-to-end extension tests in Extension Development Host
+  - [ ]* 14.7 Commit: `git add test/extension/ && git commit -m "test(e2e): add end-to-end extension tests in Development Host
 
-- Add commands.test.ts verifying all 7 Code Review commands are registered
-- Add diagnostics.test.ts testing review session and Problems panel population
-- Add comments.test.ts verifying inline comment threads at correct URIs and ranges
-- Add clear.test.ts testing clearFindings command removes all diagnostics and threads
-- Add statusBar.test.ts verifying status bar state transitions (connected/reviewing)
+- Add commands.test.ts to verify all 7 commands are registered in Command Palette
+- Add diagnostics.test.ts to verify DiagnosticCollection population after review
+- Add comments.test.ts to verify CommentThread creation at correct URIs and ranges
+- Add clear.test.ts to verify clearFindings removes both diagnostics and threads
+- Add statusBar.test.ts to verify status bar text changes during connection and review
 - All E2E tests passing in Extension Development Host"`
