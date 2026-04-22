@@ -32,11 +32,11 @@
 - Add Property 8 test for URL validation correctness with WHATWG URL standard
 - All tests passing"`
 
-- [ ] 4. Logging infrastructure
-  - [ ] 4.1 Create `src/ui/OutputChannelLogger.ts` implementing a logger that wraps `vscode.window.createOutputChannel("Code Review")`; expose `log(level: 'info'|'warn'|'error', message: string, context?: object)` which writes lines prefixed with an ISO 8601 timestamp and level; expose `show()` to reveal the channel; implement `dispose()`
-  - [ ] 4.2 Write unit tests in `test/unit/OutputChannelLogger.test.ts` covering: log lines include ISO 8601 timestamp prefix, log lines include the level string, `show()` calls the underlying channel's `show()` method (mock the `vscode.OutputChannel`)
-  - [ ] 4.3 Verify: `npx vitest run test/unit/OutputChannelLogger.test.ts` passes
-  - [ ] 4.4 Commit: `git add src/ui/ test/unit/OutputChannelLogger.test.ts && git commit -m "feat(logging): implement OutputChannelLogger with ISO 8601 timestamps
+- [x] 4. Logging infrastructure
+  - [x] 4.1 Create `src/ui/OutputChannelLogger.ts` implementing a logger that wraps `vscode.window.createOutputChannel("Code Review")`; expose `log(level: 'info'|'warn'|'error', message: string, context?: object)` which writes lines prefixed with an ISO 8601 timestamp and level; expose `show()` to reveal the channel; implement `dispose()`
+  - [x] 4.2 Write unit tests in `test/unit/OutputChannelLogger.test.ts` covering: log lines include ISO 8601 timestamp prefix, log lines include the level string, `show()` calls the underlying channel's `show()` method (mock the `vscode.OutputChannel`)
+  - [x] 4.3 Verify: `npx vitest run test/unit/OutputChannelLogger.test.ts` passes
+  - [x] 4.4 Commit: `git add src/ui/ test/unit/OutputChannelLogger.test.ts && git commit -m "feat(logging): implement OutputChannelLogger with ISO 8601 timestamps
 
 - Add OutputChannelLogger wrapping vscode.window.createOutputChannel
 - Implement log() method with level-based logging (info/warn/error)
