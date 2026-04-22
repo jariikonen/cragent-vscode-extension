@@ -133,7 +133,7 @@ describe('ConnectionManager', () => {
 
   describe('retry on failure', () => {
     it('should retry with correct delay values: 1s, 2s, 4s', async () => {
-      // Fail first 3 attempts, succeed on 4th
+      // Fail initial + 2 retries, succeed on 3rd retry (4th attempt)
       mockConnect
         .mockRejectedValueOnce(new Error('Connection refused'))
         .mockRejectedValueOnce(new Error('Connection refused'))
@@ -146,7 +146,7 @@ describe('ConnectionManager', () => {
       expect(connectionManager.isConnected).toBe(true);
     });
 
-    it('should succeed on second attempt after one failure', async () => {
+    it('should succeed on first retry after initial failure', async () => {
       mockConnect
         .mockRejectedValueOnce(new Error('Connection refused'))
         .mockResolvedValueOnce(undefined);
@@ -157,7 +157,7 @@ describe('ConnectionManager', () => {
       expect(connectionManager.isConnected).toBe(true);
     });
 
-    it('should succeed on third attempt after two failures', async () => {
+    it('should succeed on second retry after two failures', async () => {
       mockConnect
         .mockRejectedValueOnce(new Error('Timeout'))
         .mockRejectedValueOnce(new Error('Timeout'))
@@ -233,7 +233,7 @@ describe('ConnectionManager', () => {
       expect(delayCallArgs).toEqual([1000, 2000, 4000]);
     });
 
-    it('should have made 4 total connection attempts (1 initial + 3 retries)', async () => {
+    it('should have made 4 total connection attempts', async () => {
       await connectionManager.connect();
 
       expect(mockConnect).toHaveBeenCalledTimes(4);

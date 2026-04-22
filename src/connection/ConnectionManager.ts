@@ -3,7 +3,9 @@ import { MCPClient } from './MCPClient';
 import { ConfigurationManager } from '../config/ConfigurationManager';
 import { Logger } from '../ui/OutputChannelLogger';
 
+/** Delays between retries (not including the initial attempt). */
 const RETRY_DELAYS_MS = [1000, 2000, 4000];
+const MAX_ATTEMPTS = 1 + RETRY_DELAYS_MS.length; // 1 initial + 3 retries = 4
 
 export interface ConnectionManager {
   connect(): Promise<void>;
@@ -16,8 +18,9 @@ export interface ConnectionManager {
 /**
  * Manages the lifecycle of the MCP client connection with exponential backoff retry.
  *
- * On connect failure, retries up to 3 times with delays of 1 s, 2 s, 4 s.
- * After all retries are exhausted, shows a VS Code error notification.
+ * Makes one initial attempt, then retries up to 3 more times with delays of
+ * 1 s, 2 s, 4 s between each retry. After all attempts are exhausted, shows a
+ * VS Code error notification.
  */
 export class DefaultConnectionManager implements ConnectionManager {
   private client: MCPClient | null = null;
@@ -45,7 +48,8 @@ export class DefaultConnectionManager implements ConnectionManager {
 
   /**
    * Connects to the MCP server using the current configuration.
-   * Retries up to 3 times with exponential backoff on failure.
+   * Makes one initial attempt, then retries up to 3 more times with
+   * exponential backoff (1 s → 2 s → 4 s) on failure.
    */
   async connect(): Promise<void> {
     // Disconnect any existing connection first
@@ -58,7 +62,7 @@ export class DefaultConnectionManager implements ConnectionManager {
 
     let lastError: Error | undefined;
 
-    for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {
         this.client = new MCPClient(config.serverUrl, authToken);
         await this.client.connect();
@@ -72,18 +76,18 @@ export class DefaultConnectionManager implements ConnectionManager {
           serverUrl: config.serverUrl,
         });
 
-        // If we still have retries left, wait before the next attempt
+        // Wait before the next retry (no delay after the last attempt)
         if (attempt < RETRY_DELAYS_MS.length) {
           await this.delayFn(RETRY_DELAYS_MS[attempt]);
         }
       }
     }
 
-    // All retries exhausted
+    // All attempts exhausted
     this.setConnected(false);
     this.client = null;
 
-    const message = `Code Review: Failed to connect to MCP server after ${RETRY_DELAYS_MS.length + 1} attempts. ${lastError?.message ?? ''}`;
+    const message = `Code Review: Failed to connect to MCP server after ${MAX_ATTEMPTS} attempts. ${lastError?.message ?? ''}`;
     this.logger.log('error', message);
     vscode.window.showErrorMessage(message);
   }
