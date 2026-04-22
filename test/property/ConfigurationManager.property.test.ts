@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fc from 'fast-check';
+import { DefaultConfigurationManager } from '../../src/config/ConfigurationManager';
 
 // Feature: vscode-code-review-extension, Property 8: URL Validation Correctness
 
@@ -13,14 +14,48 @@ import * as fc from 'fast-check';
  * Validates: Requirements 6.2
  */
 
-function isValidUrl(urlString: string): boolean {
-  try {
-    new URL(urlString);
-    return true;
-  } catch {
-    return false;
-  }
-}
+// Mock vscode module
+const { mockGetConfiguration, mockOnDidChangeConfiguration } = vi.hoisted(() => ({
+  mockGetConfiguration: vi.fn(),
+  mockOnDidChangeConfiguration: vi.fn(),
+}));
+
+vi.mock('vscode', () => ({
+  workspace: {
+    getConfiguration: mockGetConfiguration,
+    onDidChangeConfiguration: mockOnDidChangeConfiguration,
+  },
+  window: {
+    showErrorMessage: vi.fn(),
+  },
+  commands: {
+    executeCommand: vi.fn(),
+  },
+}));
+
+let configManager: DefaultConfigurationManager;
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  
+  // Setup default mock configuration with valid URL
+  const mockConfig = {
+    get: vi.fn((key: string, defaultValue: any) => {
+      if (key === 'serverUrl') return 'http://localhost:3000/mcp';
+      return defaultValue;
+    }),
+  };
+  mockGetConfiguration.mockReturnValue(mockConfig);
+  mockOnDidChangeConfiguration.mockReturnValue({ dispose: vi.fn() });
+  
+  const mockContext = {
+    secrets: {
+      get: vi.fn(),
+      store: vi.fn(),
+    },
+  };
+  configManager = new DefaultConfigurationManager(mockContext as any);
+});
 
 describe('Property 8: URL Validation Correctness', () => {
   it('should accept valid WHATWG URLs and reject invalid strings', () => {
@@ -28,7 +63,7 @@ describe('Property 8: URL Validation Correctness', () => {
       fc.property(
         fc.oneof(fc.webUrl(), fc.string()),
         (input) => {
-          const validatorResult = isValidUrl(input);
+          const validatorResult = configManager.validateUrl(input);
           
           // Check if the input is actually a valid URL according to WHATWG standard
           let isActuallyValid: boolean;
@@ -52,7 +87,7 @@ describe('Property 8: URL Validation Correctness', () => {
       fc.property(
         fc.webUrl(),
         (url) => {
-          expect(isValidUrl(url)).toBe(true);
+          expect(configManager.validateUrl(url)).toBe(true);
         }
       ),
       { numRuns: 100 }
@@ -71,7 +106,7 @@ describe('Property 8: URL Validation Correctness', () => {
           fc.string().filter(s => !s.includes('://'))
         ),
         (input) => {
-          const result = isValidUrl(input);
+          const result = configManager.validateUrl(input);
           
           // Verify the result matches WHATWG URL standard
           let expected: boolean;
@@ -106,7 +141,7 @@ describe('Property 8: URL Validation Correctness', () => {
     ];
 
     edgeCases.forEach(testCase => {
-      const validatorResult = isValidUrl(testCase);
+      const validatorResult = configManager.validateUrl(testCase);
       
       let expectedResult: boolean;
       try {

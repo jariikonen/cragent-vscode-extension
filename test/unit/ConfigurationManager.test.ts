@@ -2,22 +2,25 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DefaultConfigurationManager } from '../../src/config/ConfigurationManager';
 
 // Mock vscode module - must be defined before vi.mock due to hoisting
-vi.mock('vscode', () => {
-  const mockGetConfiguration = vi.fn();
-  const mockOnDidChangeConfiguration = vi.fn();
-  
-  return {
-    workspace: {
-      getConfiguration: mockGetConfiguration,
-      onDidChangeConfiguration: mockOnDidChangeConfiguration,
-    },
-  };
-});
+const { mockShowErrorMessage, mockExecuteCommand, mockGetConfiguration, mockOnDidChangeConfiguration } = vi.hoisted(() => ({
+  mockShowErrorMessage: vi.fn(),
+  mockExecuteCommand: vi.fn(),
+  mockGetConfiguration: vi.fn(),
+  mockOnDidChangeConfiguration: vi.fn(),
+}));
 
-// Import the mocked vscode module to access the mock functions
-import * as vscode from 'vscode';
-const mockGetConfiguration = vi.mocked(vscode.workspace.getConfiguration);
-const mockOnDidChangeConfiguration = vi.mocked(vscode.workspace.onDidChangeConfiguration);
+vi.mock('vscode', () => ({
+  workspace: {
+    getConfiguration: mockGetConfiguration,
+    onDidChangeConfiguration: mockOnDidChangeConfiguration,
+  },
+  window: {
+    showErrorMessage: mockShowErrorMessage,
+  },
+  commands: {
+    executeCommand: mockExecuteCommand,
+  },
+}));
 
 const mockSecretsGet = vi.fn();
 const mockSecretsStore = vi.fn();
@@ -35,6 +38,16 @@ describe('ConfigurationManager', () => {
         store: mockSecretsStore,
       },
     };
+
+    // Setup default mock configuration
+    const mockConfig = {
+      get: vi.fn((key: string, defaultValue: any) => {
+        if (key === 'serverUrl') return 'http://localhost:3000/mcp';
+        return defaultValue;
+      }),
+    };
+    mockGetConfiguration.mockReturnValue(mockConfig);
+    mockOnDidChangeConfiguration.mockReturnValue({ dispose: vi.fn() });
 
     configManager = new DefaultConfigurationManager(mockContext);
   });
@@ -65,6 +78,47 @@ describe('ConfigurationManager', () => {
     it('should return false for invalid URLs', () => {
       expect(configManager.isLocalAddress('not-a-url')).toBe(false);
       expect(configManager.isLocalAddress('')).toBe(false);
+    });
+  });
+
+  describe('validateUrl', () => {
+    it('should return true for valid HTTP URLs', () => {
+      expect(configManager.validateUrl('http://localhost:3000')).toBe(true);
+      expect(configManager.validateUrl('https://example.com')).toBe(true);
+      expect(configManager.validateUrl('http://127.0.0.1:8080/path')).toBe(true);
+    });
+
+    it('should return true for valid URLs with various protocols', () => {
+      expect(configManager.validateUrl('ftp://example.com')).toBe(true);
+      expect(configManager.validateUrl('file:///path/to/file')).toBe(true);
+      expect(configManager.validateUrl('ws://localhost:3000')).toBe(true);
+    });
+
+    it('should return true for valid URLs with query strings and fragments', () => {
+      expect(configManager.validateUrl('http://example.com:8080/path?query=value#fragment')).toBe(true);
+      expect(configManager.validateUrl('https://api.example.com/v1/users?id=123')).toBe(true);
+    });
+
+    it('should return true for IPv6 URLs', () => {
+      expect(configManager.validateUrl('http://[::1]:3000')).toBe(true);
+      expect(configManager.validateUrl('https://[2001:db8::1]')).toBe(true);
+    });
+
+    it('should return false for invalid URLs', () => {
+      expect(configManager.validateUrl('not-a-url')).toBe(false);
+      expect(configManager.validateUrl('')).toBe(false);
+      expect(configManager.validateUrl('http://')).toBe(false);
+      expect(configManager.validateUrl('://missing-protocol')).toBe(false);
+    });
+
+    it('should return false for URLs without protocol', () => {
+      expect(configManager.validateUrl('example.com')).toBe(false);
+      expect(configManager.validateUrl('www.example.com')).toBe(false);
+    });
+
+    it('should return false for malformed URLs', () => {
+      expect(configManager.validateUrl('http://example .com')).toBe(false);
+      expect(configManager.validateUrl('http://exam ple.com')).toBe(false);
     });
   });
 
@@ -194,6 +248,130 @@ describe('ConfigurationManager', () => {
 
       expect(mockOnDidChangeConfiguration).toHaveBeenCalled();
       expect(mockListener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('URL validation on initialization and change', () => {
+    it('should not show error for valid URL on initialization', () => {
+      const mockConfig = {
+        get: vi.fn((key: string, defaultValue: any) => {
+          if (key === 'serverUrl') return 'https://example.com/mcp';
+          return defaultValue;
+        }),
+      };
+      mockGetConfiguration.mockReturnValue(mockConfig);
+      mockOnDidChangeConfiguration.mockReturnValue({ dispose: vi.fn() });
+
+      new DefaultConfigurationManager(mockContext);
+
+      expect(mockShowErrorMessage).not.toHaveBeenCalled();
+    });
+
+    it('should show error for invalid URL on initialization', () => {
+      const mockConfig = {
+        get: vi.fn((key: string, defaultValue: any) => {
+          if (key === 'serverUrl') return 'not-a-valid-url';
+          return defaultValue;
+        }),
+      };
+      mockGetConfiguration.mockReturnValue(mockConfig);
+      mockOnDidChangeConfiguration.mockReturnValue({ dispose: vi.fn() });
+      mockShowErrorMessage.mockResolvedValue(undefined);
+
+      new DefaultConfigurationManager(mockContext);
+
+      expect(mockShowErrorMessage).toHaveBeenCalledWith(
+        'Code Review: Invalid server URL "not-a-valid-url". Please provide a valid URL in settings.',
+        'Open Settings'
+      );
+    });
+
+    it('should show error only once for the same invalid URL', () => {
+      const mockConfig = {
+        get: vi.fn((key: string, defaultValue: any) => {
+          if (key === 'serverUrl') return 'invalid-url';
+          return defaultValue;
+        }),
+      };
+      mockGetConfiguration.mockReturnValue(mockConfig);
+      
+      let configChangeCallback: any;
+      mockOnDidChangeConfiguration.mockImplementation((callback) => {
+        configChangeCallback = callback;
+        return { dispose: vi.fn() };
+      });
+      mockShowErrorMessage.mockResolvedValue(undefined);
+
+      new DefaultConfigurationManager(mockContext);
+
+      // Should show error on initialization
+      expect(mockShowErrorMessage).toHaveBeenCalledTimes(1);
+
+      // Simulate a different config change (not serverUrl)
+      configChangeCallback({ affectsConfiguration: (section: string) => section === 'codeReview.sortField' });
+
+      // Should not show error again
+      expect(mockShowErrorMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('should validate URL again when serverUrl configuration changes', () => {
+      const mockConfig = {
+        get: vi.fn((key: string, defaultValue: any) => {
+          if (key === 'serverUrl') return 'http://localhost:3000';
+          return defaultValue;
+        }),
+      };
+      mockGetConfiguration.mockReturnValue(mockConfig);
+      
+      let configChangeCallback: any;
+      mockOnDidChangeConfiguration.mockImplementation((callback) => {
+        configChangeCallback = callback;
+        return { dispose: vi.fn() };
+      });
+      mockShowErrorMessage.mockResolvedValue(undefined);
+
+      new DefaultConfigurationManager(mockContext);
+
+      // No error initially (valid URL)
+      expect(mockShowErrorMessage).not.toHaveBeenCalled();
+
+      // Change to invalid URL
+      mockConfig.get.mockImplementation((key: string, defaultValue: any) => {
+        if (key === 'serverUrl') return 'invalid-url';
+        return defaultValue;
+      });
+
+      // Simulate serverUrl config change
+      configChangeCallback({ affectsConfiguration: (section: string) => section === 'codeReview.serverUrl' });
+
+      // Should show error now
+      expect(mockShowErrorMessage).toHaveBeenCalledWith(
+        'Code Review: Invalid server URL "invalid-url". Please provide a valid URL in settings.',
+        'Open Settings'
+      );
+    });
+
+    it('should open settings when user clicks "Open Settings" button', async () => {
+      const mockConfig = {
+        get: vi.fn((key: string, defaultValue: any) => {
+          if (key === 'serverUrl') return 'invalid';
+          return defaultValue;
+        }),
+      };
+      mockGetConfiguration.mockReturnValue(mockConfig);
+      mockOnDidChangeConfiguration.mockReturnValue({ dispose: vi.fn() });
+      mockShowErrorMessage.mockResolvedValue('Open Settings');
+      mockExecuteCommand.mockResolvedValue(undefined);
+
+      new DefaultConfigurationManager(mockContext);
+
+      // Wait for the promise chain to resolve
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockExecuteCommand).toHaveBeenCalledWith(
+        'workbench.action.openSettings',
+        'codeReview.serverUrl'
+      );
     });
   });
 });

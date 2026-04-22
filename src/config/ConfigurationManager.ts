@@ -19,10 +19,43 @@ export interface ConfigurationManager {
   setAuthToken(token: string): Promise<void>;
   onDidChangeConfig(listener: (config: ExtensionConfig) => void): vscode.Disposable;
   isLocalAddress(url: string): boolean;
+  validateUrl(url: string): boolean;
 }
 
 export class DefaultConfigurationManager implements ConfigurationManager {
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  private hasShownUrlValidationError = false;
+
+  constructor(private readonly context: vscode.ExtensionContext) {
+    // Validate URL on startup
+    this.validateAndWarnServerUrl();
+    
+    // Validate URL whenever configuration changes
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration('codeReview.serverUrl')) {
+        this.hasShownUrlValidationError = false; // Reset flag on config change
+        this.validateAndWarnServerUrl();
+      }
+    });
+  }
+
+  private validateAndWarnServerUrl(): void {
+    const config = vscode.workspace.getConfiguration('codeReview');
+    const serverUrl = config.get<string>('serverUrl', 'http://localhost:3000/mcp');
+    
+    if (!this.validateUrl(serverUrl)) {
+      if (!this.hasShownUrlValidationError) {
+        vscode.window.showErrorMessage(
+          `Code Review: Invalid server URL "${serverUrl}". Please provide a valid URL in settings.`,
+          'Open Settings'
+        ).then(selection => {
+          if (selection === 'Open Settings') {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'codeReview.serverUrl');
+          }
+        });
+        this.hasShownUrlValidationError = true;
+      }
+    }
+  }
 
   getConfig(): ExtensionConfig {
     const config = vscode.workspace.getConfiguration('codeReview');
@@ -69,6 +102,15 @@ export class DefaultConfigurationManager implements ConfigurationManager {
       }
       
       return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+    } catch {
+      return false;
+    }
+  }
+
+  validateUrl(url: string): boolean {
+    try {
+      new URL(url);
+      return true;
     } catch {
       return false;
     }
