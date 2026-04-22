@@ -1,0 +1,125 @@
+{
+  "name": "vscode-code-review-extension",
+  "displayName": "Code Review",
+  "description": "AI-powered code review agent integration via Model Context Protocol",
+  "version": "0.1.0",
+  "publisher": "code-review",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codeReview.reviewFile",
+        "title": "Code Review: Review Current File"
+      },
+      {
+        "command": "codeReview.reviewSelection",
+        "title": "Code Review: Review Selection"
+      },
+      {
+        "command": "codeReview.reviewWorkspace",
+        "title": "Code Review: Review Workspace"
+      },
+      {
+        "command": "codeReview.clearFindings",
+        "title": "Code Review: Clear All Findings"
+      },
+      {
+        "command": "codeReview.dismissThread",
+        "title": "Code Review: Dismiss"
+      },
+      {
+        "command": "codeReview.setAuthToken",
+        "title": "Code Review: Set Authentication Token"
+      },
+      {
+        "command": "codeReview.openOutputChannel",
+        "title": "Code Review: Open Output Channel"
+      }
+    ],
+    "configuration": {
+      "title": "Code Review",
+      "properties": {
+        "codeReview.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:3000/mcp",
+          "description": "URL of the MCP server hosting the code review agent."
+        },
+        "codeReview.requestTimeoutMs": {
+          "type": "number",
+          "default": 30000,
+          "description": "Request timeout in milliseconds."
+        },
+        "codeReview.showInformationFindings": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to display information-severity findings."
+        },
+        "codeReview.sortField": {
+          "type": "string",
+          "enum": [
+            "priority",
+            "severity",
+            "confidence",
+            "importance"
+          ],
+          "default": "priority",
+          "description": "Score field used to sort findings (descending)."
+        },
+        "codeReview.filter.minPriority": {
+          "type": "number",
+          "default": 0.0,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Minimum priority score threshold (0.0-1.0)."
+        },
+        "codeReview.filter.minSeverity": {
+          "type": "number",
+          "default": 0.0,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Minimum severity score threshold (0.0-1.0)."
+        },
+        "codeReview.filter.minConfidence": {
+          "type": "number",
+          "default": 0.0,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Minimum confidence score threshold (0.0-1.0)."
+        },
+        "codeReview.filter.minImportance": {
+          "type": "number",
+          "default": 0.0,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Minimum importance score threshold (0.0-1.0)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "vitest run",
+    "test:extension": "vscode-test"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8",
+    "fast-check": "^3.15.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0"
+  }
+}
