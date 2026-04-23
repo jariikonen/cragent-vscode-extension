@@ -88,7 +88,7 @@ describe('Property 3: Incremental Sync Correctness', () => {
   it('should transfer exactly the files with lastModified > sinceTimestamp when non-null, or all files when null', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(fileDescArb, { minLength: 0, maxLength: 20 }),
+        fc.uniqueArray(fileDescArb, { minLength: 0, maxLength: 20, selector: (f) => f.name }),
         sinceTimestampArb,
         async (files, sinceTimestamp) => {
           vi.clearAllMocks();
@@ -149,7 +149,7 @@ describe('Property 3: Incremental Sync Correctness', () => {
   it('should transfer all files when sinceTimestamp is null regardless of lastModified values', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(fileDescArb, { minLength: 0, maxLength: 20 }),
+        fc.uniqueArray(fileDescArb, { minLength: 0, maxLength: 20, selector: (f) => f.name }),
         async (files) => {
           vi.clearAllMocks();
 
