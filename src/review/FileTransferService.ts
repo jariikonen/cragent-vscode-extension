@@ -13,32 +13,15 @@ export interface FilePayload {
   lastModified: string; // ISO 8601
 }
 
+export const DEFAULT_MAX_CONCURRENT_TRANSFERS = 5;
+
 export interface FileTransferService {
   queryIndexTimestamp(): Promise<IndexTimestampResponse>;
-  buildFilePayloads(
+  buildAndTransfer(
     uris: vscode.Uri[],
     sinceTimestamp: string | null,
-  ): Promise<FilePayload[]>;
-  transferFilesParallel(payloads: FilePayload[]): Promise<void>;
-}
-
-/**
- * Filters file payloads by timestamp.
- *
- * When `sinceTimestamp` is non-null, returns only payloads whose
- * `lastModified` is strictly after `sinceTimestamp` (ISO 8601 comparison).
- * When `sinceTimestamp` is null, returns all payloads.
- *
- * Exported as a pure function for direct property-based testing.
- */
-export function filterByTimestamp(
-  payloads: FilePayload[],
-  sinceTimestamp: string | null,
-): FilePayload[] {
-  if (sinceTimestamp === null) {
-    return payloads;
-  }
-  return payloads.filter((p) => p.lastModified > sinceTimestamp);
+    concurrency?: number,
+  ): Promise<number>;
 }
 
 /**
@@ -69,77 +52,82 @@ export class DefaultFileTransferService implements FileTransferService {
   }
 
   /**
-   * Reads each file's content and lastModified time, then filters to only
-   * files modified after `sinceTimestamp` (or all files when null).
+   * Fused stat → filter → read → transfer pipeline with bounded concurrency.
+   *
+   * Each worker picks a URI, stats it, checks the timestamp filter, reads the
+   * content only if it passes, transfers it, and moves on. At most
+   * `concurrency` file contents are in memory at any time.
+   *
+   * Returns the number of files actually transferred.
    */
-  async buildFilePayloads(
+  async buildAndTransfer(
     uris: vscode.Uri[],
     sinceTimestamp: string | null,
-  ): Promise<FilePayload[]> {
+    concurrency: number = DEFAULT_MAX_CONCURRENT_TRANSFERS,
+  ): Promise<number> {
+    const poolSize = Math.max(1, Math.floor(concurrency));
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    let transferred = 0;
+    let index = 0;
 
-    const allPayloads = await Promise.all(
-      uris.map(async (uri) => {
+    this.logger.log('info', `Starting build-and-transfer for ${uris.length} files with concurrency ${poolSize}`);
+
+    const worker = async (): Promise<void> => {
+      while (index < uris.length) {
+        const current = index++;
+        const uri = uris[current];
+
         try {
-          const [contentBytes, stat] = await Promise.all([
-            vscode.workspace.fs.readFile(uri),
-            vscode.workspace.fs.stat(uri),
-          ]);
-
-          const content = Buffer.from(contentBytes).toString('utf-8');
+          // Phase 1: stat to get lastModified
+          const stat = await vscode.workspace.fs.stat(uri);
           const lastModified = new Date(stat.mtime).toISOString();
 
-          // Compute workspace-relative path
+          // Phase 2: filter by timestamp
+          if (sinceTimestamp !== null && lastModified <= sinceTimestamp) {
+            continue;
+          }
+
+          // Phase 3: read content (only for files that pass the filter)
+          const contentBytes = await vscode.workspace.fs.readFile(uri);
+          const content = Buffer.from(contentBytes).toString('utf-8');
+
           let relativePath = uri.fsPath;
           if (workspaceFolder) {
             relativePath = vscode.workspace.asRelativePath(uri, false);
           }
 
-          // Determine language ID from the file extension
           const languageId = this.getLanguageId(uri);
 
-          return {
+          // Phase 4: transfer immediately, then content can be GC'd
+          await this.mcpClient.callTool('transfer_file', {
             path: relativePath,
             content,
             languageId,
             lastModified,
-          } as FilePayload;
+          });
+
+          transferred++;
         } catch (error) {
-          this.logger.log('warn', `Failed to read file: ${uri.fsPath}`, {
+          this.logger.log('warn', `Failed to process file: ${uri.fsPath}`, {
             error: error instanceof Error ? error.message : String(error),
           });
-          return null;
         }
-      }),
+      }
+    };
+
+    if (uris.length === 0) {
+      this.logger.log('info', 'No files to transfers');
+      return transferred;
+    }
+
+    const workers = Array.from(
+      { length: Math.min(poolSize, uris.length) },
+      () => worker(),
     );
+    await Promise.all(workers);
 
-    // Remove any files that failed to read
-    const validPayloads = allPayloads.filter(
-      (p): p is FilePayload => p !== null,
-    );
-
-    // Apply timestamp filtering
-    return filterByTimestamp(validPayloads, sinceTimestamp);
-  }
-
-  /**
-   * Sends all file payloads to the MCP server in parallel using Promise.all.
-   */
-  async transferFilesParallel(payloads: FilePayload[]): Promise<void> {
-    this.logger.log('info', `Transferring ${payloads.length} files in parallel`);
-
-    await Promise.all(
-      payloads.map((payload) =>
-        this.mcpClient.callTool('transfer_file', {
-          path: payload.path,
-          content: payload.content,
-          languageId: payload.languageId,
-          lastModified: payload.lastModified,
-        }),
-      ),
-    );
-
-    this.logger.log('info', `Successfully transferred ${payloads.length} files`);
+    this.logger.log('info', `Successfully transferred ${transferred} of ${uris.length} files`);
+    return transferred;
   }
 
   /**

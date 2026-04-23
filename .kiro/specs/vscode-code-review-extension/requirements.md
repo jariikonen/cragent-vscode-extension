@@ -54,7 +54,7 @@ This feature is a VS Code extension that integrates a code review agent via the 
 3. WHEN a Review_Session is triggered for a file, THE MCP_Client SHALL send the file's full content and its language identifier to the Review_Agent via the MCP_Server.
 4. WHEN a Review_Session is triggered for the workspace, THE MCP_Client SHALL send an Index_Timestamp query to the MCP_Server and parse the `timestamp` field from the JSON response object before transferring any file content.
 5. WHEN the `timestamp` field in the Index_Timestamp response is a non-null ISO 8601 datetime string, THE MCP_Client SHALL send only the files whose last-modified time is after that timestamp to the Review_Agent; WHEN the `timestamp` field is `null`, THE MCP_Client SHALL send all workspace files to the Review_Agent.
-6. WHEN transferring files to the MCP_Server for a workspace Review_Session, THE MCP_Client SHALL send all file transfers in parallel.
+6. WHEN transferring files to the MCP_Server for a workspace Review_Session, THE MCP_Client SHALL send file transfers using a bounded concurrency pool, where the maximum number of concurrent in-flight transfers is controlled by the `codeReview.maxConcurrentTransfers` Configuration setting (default: 5, minimum: 1, maximum: 50).
 7. WHILE a Review_Session is in progress, THE Extension SHALL display a progress notification indicating the review is running.
 8. IF a Review_Session is triggered while another Review_Session is already in progress for the same file, THEN THE Extension SHALL cancel the in-progress session and start the new one.
 9. WHERE a file selection is active in the editor, THE Extension SHALL provide a command to trigger a Review_Session for only the selected lines.
@@ -110,7 +110,7 @@ This feature is a VS Code extension that integrates a code review agent via the 
 
 #### Acceptance Criteria
 
-1. THE Extension SHALL expose the following Configuration settings in VS Code's settings UI: MCP server URL, authentication token (optional; stored in VS Code's SecretStorage), request timeout in milliseconds, whether to show information-severity findings, default sort field (one of: confidence, severity, importance, priority; default: priority), and minimum threshold values (0.0–1.0) for each of the four scores (confidence, severity, importance, priority).
+1. THE Extension SHALL expose the following Configuration settings in VS Code's settings UI: MCP server URL, authentication token (optional; stored in VS Code's SecretStorage), request timeout in milliseconds, maximum concurrent file transfers (integer, default: 5, minimum: 1, maximum: 50), whether to show information-severity findings, default sort field (one of: confidence, severity, importance, priority; default: priority), and minimum threshold values (0.0–1.0) for each of the four scores (confidence, severity, importance, priority).
 2. THE Extension SHALL validate the MCP server URL on save and display an error in the settings UI if the value is not a valid URL.
 3. WHEN the configured MCP server URL resolves to a remote (non-local) address and the authentication token is not set, THEN THE Extension SHALL display a one-time notification prompting the user to configure the authentication token.
 4. WHEN the request timeout Configuration value is changed, THE MCP_Client SHALL apply the new timeout to all subsequent Review_Sessions without requiring an extension restart.

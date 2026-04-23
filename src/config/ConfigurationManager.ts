@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 export interface ExtensionConfig {
   serverUrl: string;
   requestTimeoutMs: number;
+  maxConcurrentTransfers: number;
   showInformationFindings: boolean;
   sortField: 'priority' | 'severity' | 'confidence' | 'importance';
   filter: {
@@ -63,6 +64,7 @@ export class DefaultConfigurationManager implements ConfigurationManager {
     return {
       serverUrl: config.get<string>('serverUrl', 'http://localhost:3000/mcp'),
       requestTimeoutMs: config.get<number>('requestTimeoutMs', 30000),
+      maxConcurrentTransfers: config.get<number>('maxConcurrentTransfers', 5),
       showInformationFindings: config.get<boolean>('showInformationFindings', true),
       sortField: config.get<'priority' | 'severity' | 'confidence' | 'importance'>('sortField', 'priority'),
       filter: {

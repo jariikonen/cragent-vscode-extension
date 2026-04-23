@@ -135,6 +135,7 @@ describe('ConfigurationManager', () => {
       expect(config).toEqual({
         serverUrl: 'http://localhost:3000/mcp',
         requestTimeoutMs: 30000,
+        maxConcurrentTransfers: 5,
         showInformationFindings: true,
         sortField: 'priority',
         filter: {
@@ -152,6 +153,7 @@ describe('ConfigurationManager', () => {
           const values: Record<string, any> = {
             'serverUrl': 'https://api.example.com/mcp',
             'requestTimeoutMs': 60000,
+            'maxConcurrentTransfers': 10,
             'showInformationFindings': false,
             'sortField': 'severity',
             'filter.minPriority': 0.5,
@@ -169,6 +171,7 @@ describe('ConfigurationManager', () => {
       expect(config).toEqual({
         serverUrl: 'https://api.example.com/mcp',
         requestTimeoutMs: 60000,
+        maxConcurrentTransfers: 10,
         showInformationFindings: false,
         sortField: 'severity',
         filter: {
@@ -231,6 +234,7 @@ describe('ConfigurationManager', () => {
       expect(mockListener).toHaveBeenCalledWith(expect.objectContaining({
         serverUrl: 'http://localhost:3000/mcp',
         requestTimeoutMs: 30000,
+        maxConcurrentTransfers: 5,
       }));
     });
 

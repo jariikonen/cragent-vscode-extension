@@ -17,7 +17,7 @@
   - [x] 2.6 Verify: `npx vitest run test/unit/Finding.test.ts test/property/Finding.property.test.ts` passes all tests
 
 - [x] 3. Configuration management
-  - [x] 3.1 Create `src/config/ConfigurationManager.ts` implementing the `ConfigurationManager` interface: `getConfig()` reads all `codeReview.*` workspace settings and returns a typed `ExtensionConfig` object; `getAuthToken()` reads from `vscode.ExtensionContext.secrets` under key `codeReview.authToken`; `setAuthToken(token)` writes to `SecretStorage`; `onDidChangeConfig(listener)` wraps `vscode.workspace.onDidChangeConfiguration`; `isLocalAddress(url)` returns `true` for hostnames `localhost`, `127.0.0.1`, and `::1`
+  - [x] 3.1 Create `src/config/ConfigurationManager.ts` implementing the `ConfigurationManager` interface: `getConfig()` reads all `codeReview.*` workspace settings (including `maxConcurrentTransfers`) and returns a typed `ExtensionConfig` object; `getAuthToken()` reads from `vscode.ExtensionContext.secrets` under key `codeReview.authToken`; `setAuthToken(token)` writes to `SecretStorage`; `onDidChangeConfig(listener)` wraps `vscode.workspace.onDidChangeConfiguration`; `isLocalAddress(url)` returns `true` for hostnames `localhost`, `127.0.0.1`, and `::1`
   - [x] 3.2 Write unit tests in `test/unit/ConfigurationManager.test.ts` covering: `isLocalAddress` returns `true` for all three local hostnames and `false` for a remote hostname, `getConfig` returns correct defaults when no settings are overridden (mock `vscode.workspace.getConfiguration`)
   - [x] 3.3 Write property-based test for **Property 8 — URL Validation Correctness**: generate strings with `fc.oneof(fc.webUrl(), fc.string())`, assert the validator accepts valid WHATWG URLs and rejects all others. Tag: `// Feature: vscode-code-review-extension, Property 8: URL Validation Correctness`. Validates: Requirements 6.2
   - [x] 3.4 Verify: `npx vitest run test/unit/ConfigurationManager.test.ts test/property/` passes; manually confirm `codeReview.*` settings appear in VS Code Settings UI after `npm run compile`
@@ -63,22 +63,24 @@
 - All tests passing"`
 
 - [x] 6. File transfer service
-  - [x] 6.1 Create `src/review/FileTransferService.ts` implementing `FileTransferService`; `queryIndexTimestamp()` calls the MCP tool to retrieve the index timestamp and returns `{ timestamp: string | null }`; `buildFilePayloads(uris, sinceTimestamp)` reads each file's content and `lastModified` time, filters to only files with `lastModified > sinceTimestamp` when non-null (includes all when null), and returns `FilePayload[]`; `transferFilesParallel(payloads)` dispatches all transfers with `Promise.all`
-  - [x] 6.2 Write unit tests in `test/unit/FileTransferService.test.ts` covering: `buildFilePayloads` with `sinceTimestamp = null` includes all files, with a timestamp includes only newer files, with a timestamp equal to a file's `lastModified` excludes that file (strictly after), empty URI list returns empty array
-  - [x] 6.3 Write property-based test for **Property 3 — Incremental Sync Correctness**: generate a list of `FilePayload` objects with random ISO timestamps and a random `sinceTimestamp` (or `null`), assert the filtered list equals exactly the subset with `lastModified > sinceTimestamp` when non-null, or all files when null. Tag: `// Feature: vscode-code-review-extension, Property 3: Incremental Sync Correctness`. Validates: Requirements 2.5
+  - [x] 6.1 Create `src/review/FileTransferService.ts` implementing `FileTransferService`; `queryIndexTimestamp()` calls the MCP tool to retrieve the index timestamp and returns `{ timestamp: string | null }`; `buildAndTransfer(uris, sinceTimestamp, concurrency?)` implements a fused stat → filter → read → transfer pipeline with a bounded concurrency pool — a fixed number of worker coroutines (controlled by the `concurrency` parameter, default `DEFAULT_MAX_CONCURRENT_TRANSFERS = 5`) pull URIs from a shared index, stat each file, check the timestamp filter, read content only for files that pass, transfer immediately, and move on; returns the number of files actually transferred; individual file failures are logged and skipped without aborting the batch
+  - [x] 6.2 Write unit tests in `test/unit/FileTransferService.test.ts` covering: `buildAndTransfer` with `sinceTimestamp = null` includes all files, with a timestamp includes only newer files, with a timestamp equal to a file's `lastModified` excludes that file (strictly after), empty URI list returns empty array, concurrency limit is respected (max concurrent transfers ≤ configured value), individual file failures do not abort the batch
+  - [x] 6.3 Write property-based test for **Property 3 — Incremental Sync Correctness**: generate a list of file descriptors with random ISO timestamps and a random `sinceTimestamp` (or `null`), call `buildAndTransfer` and assert the number of transferred files equals exactly the subset with `lastModified > sinceTimestamp` when non-null, or all files when null; verify no file with `lastModified <= sinceTimestamp` appears in the transfer calls. Tag: `// Feature: vscode-code-review-extension, Property 3: Incremental Sync Correctness`. Validates: Requirements 2.5
   - [x] 6.4 Verify: `npx vitest run test/unit/FileTransferService.test.ts test/property/` passes
-  - [x] 6.5 Commit: `git add src/review/FileTransferService.ts test/unit/FileTransferService.test.ts test/property/ && git commit -m "feat(review): implement FileTransferService with incremental sync
+  - [x] 6.5 Commit: `git add src/review/FileTransferService.ts test/unit/FileTransferService.test.ts test/property/ && git commit -m "feat(review): implement FileTransferService with bounded concurrency pool
 
 - Add FileTransferService for workspace file enumeration and transfer
 - Implement queryIndexTimestamp() to retrieve server-side index timestamp
-- Implement buildFilePayloads() with timestamp-based filtering (lastModified > sinceTimestamp)
-- Add transferFilesParallel() using Promise.all for concurrent file transfers
-- Add unit tests for null timestamp (all files), non-null timestamp (filtered), and boundary conditions
+- Implement buildAndTransfer() with fused stat/filter/read/transfer pipeline
+- Use bounded concurrency pool (default 5 workers) instead of unbounded Promise.all
+- Add configurable concurrency via codeReview.maxConcurrentTransfers setting (1–50)
+- Individual file failures are logged and skipped without aborting the batch
+- Add unit tests for timestamp filtering, concurrency limits, and error resilience
 - Add Property 3 test for incremental sync correctness with random timestamps
 - All tests passing"`
 
 - [ ] 7. Review session management
-  - [ ] 7.1 Create `src/review/ReviewSessionManager.ts` implementing `ReviewSessionManager`; `startSession(scope)` creates a `ReviewSession` with a unique `id` and `CancellationTokenSource`; if a session already exists for the same URI, cancels it before starting the new one; calls `FileTransferService` to send files and then calls the MCP review tool; shows a VS Code progress notification while the session runs; on completion calls `FindingDisplayManager.applyFindings`; on cancellation or error, logs to `OutputChannelLogger` and shows appropriate notification
+  - [ ] 7.1 Create `src/review/ReviewSessionManager.ts` implementing `ReviewSessionManager`; `startSession(scope)` creates a `ReviewSession` with a unique `id` and `CancellationTokenSource`; if a session already exists for the same URI, cancels it before starting the new one; calls `FileTransferService.buildAndTransfer` to send files (passing the configured `maxConcurrentTransfers` as the concurrency limit) and then calls the MCP review tool; shows a VS Code progress notification while the session runs; on completion calls `FindingDisplayManager.applyFindings`; on cancellation or error, logs to `OutputChannelLogger` and shows appropriate notification
   - [ ] 7.2 Write unit tests in `test/unit/ReviewSessionManager.test.ts` covering: starting a session for a URI that has no active session creates a new session, starting a session for a URI with an existing active session cancels the old session first, `cancelSession(uri)` cancels the session for that URI, `cancelSession()` with no argument cancels all active sessions
   - [ ] 7.3 Verify: `npx vitest run test/unit/ReviewSessionManager.test.ts` passes
   - [ ] 7.4 Commit: `git add src/review/ReviewSessionManager.ts test/unit/ReviewSessionManager.test.ts && git commit -m "feat(review): implement ReviewSessionManager with session orchestration
@@ -163,7 +165,7 @@
 - All tests passing"`
 
 - [ ] 12. VS Code commands wiring
-  - [ ] 12.1 Flesh out `src/extension.ts` `activate(context)`: instantiate all services (`OutputChannelLogger`, `ConfigurationManager`, `MCPClient`, `ConnectionManager`, `FileTransferService`, `ReviewSessionManager`, `DiagnosticCollection`, `CommentController`, `FindingDisplayManager`, `StatusBarManager`); wire `ConnectionManager.onDidChangeConnection` to `StatusBarManager`; register all commands listed below; push all disposables to `context.subscriptions`; call `ConnectionManager.connect()` and show a one-time auth warning if the URL is remote and no token is set
+  - [ ] 12.1 Flesh out `src/extension.ts` `activate(context)`: instantiate all services (`OutputChannelLogger`, `ConfigurationManager`, `MCPClient`, `ConnectionManager`, `FileTransferService`, `ReviewSessionManager`, `DiagnosticCollection`, `CommentController`, `FindingDisplayManager`, `StatusBarManager`); wire `ConnectionManager.onDidChangeConnection` to `StatusBarManager`; register all commands listed below; push all disposables to `context.subscriptions`; call `ConnectionManager.connect()` and show a one-time auth warning if the URL is remote and no token is set; pass `ConfigurationManager.getConfig().maxConcurrentTransfers` to `ReviewSessionManager` for use with `FileTransferService.buildAndTransfer`
   - [ ] 12.2 Register the following commands in `package.json` `contributes.commands` and in `extension.ts`:
     - `codeReview.reviewFile` — "Code Review: Review Current File" → `ReviewSessionManager.startSession({ kind: 'file', uri })`
     - `codeReview.reviewSelection` — "Code Review: Review Selection" → `ReviewSessionManager.startSession({ kind: 'selection', uri, range })`
@@ -186,7 +188,7 @@
 - [ ] 13. Integration tests
   - [ ] 13.1 Create `test/integration/connection.test.ts`: start an in-process mock HTTP MCP server in `beforeAll`; test full connection lifecycle (connect → call tool → disconnect); verify `ConnectionManager.isConnected` transitions correctly
   - [ ] 13.2 Create `test/integration/fileTransfer.test.ts`: test workspace review with a non-null index timestamp — verify only files with `lastModified` after the timestamp are sent to the mock server; test with `null` timestamp — verify all files are sent
-  - [ ] 13.3 Create `test/integration/parallelTransfer.test.ts`: mock server records receipt timestamps; send multiple files; assert all transfers complete and the mock server received all payloads (verifying `Promise.all` concurrency)
+  - [ ] 13.3 Create `test/integration/parallelTransfer.test.ts`: mock server tracks concurrent request count; send multiple files via `buildAndTransfer` with a specific concurrency limit; assert all transfers complete, the mock server received all payloads, and the maximum concurrent requests never exceeded the configured concurrency limit
   - [ ] 13.4 Create `test/integration/reconnection.test.ts`: simulate server drop by stopping the mock server mid-session; verify `ConnectionManager` attempts reconnect up to 3 times with the correct backoff delays (1 s, 2 s, 4 s) before emitting a failure
   - [ ] 13.5 Verify: `npx vitest run test/integration/` passes all integration tests
   - [ ] 13.6 Commit: `git add test/integration/ && git commit -m "test(integration): add integration tests for MCP connection and file transfer

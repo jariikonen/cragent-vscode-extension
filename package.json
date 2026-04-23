@@ -58,6 +58,13 @@
           "default": 30000,
           "description": "Request timeout in milliseconds."
         },
+        "codeReview.maxConcurrentTransfers": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Maximum number of files transferred to the MCP server in parallel."
+        },
         "codeReview.showInformationFindings": {
           "type": "boolean",
           "default": true,

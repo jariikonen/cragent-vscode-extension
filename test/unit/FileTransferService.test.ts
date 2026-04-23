@@ -49,28 +49,6 @@ describe('FileTransferService', () => {
     return { fsPath: path, scheme: 'file' } as any;
   }
 
-  function setupFile(path: string, content: string, mtime: number) {
-    const uri = makeUri(path);
-    const encoder = new TextEncoder();
-    const encoded = encoder.encode(content);
-
-    mockReadFile.mockImplementation((u: any) => {
-      if (u.fsPath === path) {
-        return Promise.resolve(encoded);
-      }
-      return Promise.reject(new Error('File not found'));
-    });
-
-    mockStat.mockImplementation((u: any) => {
-      if (u.fsPath === path) {
-        return Promise.resolve({ mtime });
-      }
-      return Promise.reject(new Error('File not found'));
-    });
-
-    return uri;
-  }
-
   function setupMultipleFiles(
     files: Array<{ path: string; content: string; mtime: number }>,
   ) {
@@ -100,87 +78,6 @@ describe('FileTransferService', () => {
     return files.map((f) => makeUri(f.path));
   }
 
-  describe('buildFilePayloads', () => {
-    it('should include all files when sinceTimestamp is null', async () => {
-      const uris = setupMultipleFiles([
-        {
-          path: '/workspace/src/a.ts',
-          content: 'const a = 1;',
-          mtime: new Date('2024-01-01T00:00:00Z').getTime(),
-        },
-        {
-          path: '/workspace/src/b.ts',
-          content: 'const b = 2;',
-          mtime: new Date('2024-01-02T00:00:00Z').getTime(),
-        },
-        {
-          path: '/workspace/src/c.ts',
-          content: 'const c = 3;',
-          mtime: new Date('2024-01-03T00:00:00Z').getTime(),
-        },
-      ]);
-
-      const payloads = await service.buildFilePayloads(uris, null);
-
-      expect(payloads).toHaveLength(3);
-      expect(payloads.map((p) => p.content)).toEqual([
-        'const a = 1;',
-        'const b = 2;',
-        'const c = 3;',
-      ]);
-    });
-
-    it('should include only newer files when sinceTimestamp is provided', async () => {
-      const uris = setupMultipleFiles([
-        {
-          path: '/workspace/src/old.ts',
-          content: 'old file',
-          mtime: new Date('2024-01-01T00:00:00Z').getTime(),
-        },
-        {
-          path: '/workspace/src/new.ts',
-          content: 'new file',
-          mtime: new Date('2024-01-03T00:00:00Z').getTime(),
-        },
-      ]);
-
-      const sinceTimestamp = '2024-01-02T00:00:00.000Z';
-      const payloads = await service.buildFilePayloads(uris, sinceTimestamp);
-
-      expect(payloads).toHaveLength(1);
-      expect(payloads[0].content).toBe('new file');
-    });
-
-    it('should exclude files with lastModified equal to sinceTimestamp (strictly after)', async () => {
-      const exactTime = new Date('2024-01-02T00:00:00Z');
-      const uris = setupMultipleFiles([
-        {
-          path: '/workspace/src/exact.ts',
-          content: 'exact time file',
-          mtime: exactTime.getTime(),
-        },
-        {
-          path: '/workspace/src/after.ts',
-          content: 'after time file',
-          mtime: new Date('2024-01-03T00:00:00Z').getTime(),
-        },
-      ]);
-
-      const sinceTimestamp = exactTime.toISOString();
-      const payloads = await service.buildFilePayloads(uris, sinceTimestamp);
-
-      expect(payloads).toHaveLength(1);
-      expect(payloads[0].content).toBe('after time file');
-    });
-
-    it('should return empty array for empty URI list', async () => {
-      const payloads = await service.buildFilePayloads([], null);
-
-      expect(payloads).toHaveLength(0);
-      expect(payloads).toEqual([]);
-    });
-  });
-
   describe('queryIndexTimestamp', () => {
     it('should return the timestamp from the MCP tool response', async () => {
       mockMcpClient.callTool.mockResolvedValue({
@@ -202,40 +99,126 @@ describe('FileTransferService', () => {
     });
   });
 
-  describe('transferFilesParallel', () => {
-    it('should call MCP tool for each payload in parallel', async () => {
+  describe('buildAndTransfer', () => {
+    it('should stat, read, and transfer all files when sinceTimestamp is null', async () => {
+      const uris = setupMultipleFiles([
+        {
+          path: '/workspace/src/a.ts',
+          content: 'const a = 1;',
+          mtime: new Date('2024-01-01T00:00:00Z').getTime(),
+        },
+        {
+          path: '/workspace/src/b.ts',
+          content: 'const b = 2;',
+          mtime: new Date('2024-01-02T00:00:00Z').getTime(),
+        },
+      ]);
       mockMcpClient.callTool.mockResolvedValue(undefined);
 
-      const payloads = [
+      const count = await service.buildAndTransfer(uris, null);
+
+      expect(count).toBe(2);
+      expect(mockMcpClient.callTool).toHaveBeenCalledTimes(2);
+      expect(mockReadFile).toHaveBeenCalledTimes(2);
+    });
+
+    it('should skip reading and transferring files older than sinceTimestamp', async () => {
+      const uris = setupMultipleFiles([
         {
-          path: 'src/a.ts',
-          content: 'const a = 1;',
-          languageId: 'typescript',
-          lastModified: '2024-01-01T00:00:00.000Z',
+          path: '/workspace/src/old.ts',
+          content: 'old file',
+          mtime: new Date('2024-01-01T00:00:00Z').getTime(),
         },
         {
-          path: 'src/b.ts',
-          content: 'const b = 2;',
-          languageId: 'typescript',
-          lastModified: '2024-01-02T00:00:00.000Z',
+          path: '/workspace/src/new.ts',
+          content: 'new file',
+          mtime: new Date('2024-01-03T00:00:00Z').getTime(),
         },
+      ]);
+      mockMcpClient.callTool.mockResolvedValue(undefined);
+
+      const count = await service.buildAndTransfer(
+        uris,
+        '2024-01-02T00:00:00.000Z',
+      );
+
+      expect(count).toBe(1);
+      // stat is called for both files, but readFile only for the newer one
+      expect(mockStat).toHaveBeenCalledTimes(2);
+      expect(mockReadFile).toHaveBeenCalledTimes(1);
+      expect(mockMcpClient.callTool).toHaveBeenCalledTimes(1);
+      expect(mockMcpClient.callTool).toHaveBeenCalledWith('transfer_file', {
+        path: 'src/new.ts',
+        content: 'new file',
+        languageId: 'typescript',
+        lastModified: '2024-01-03T00:00:00.000Z',
+      });
+    });
+
+    it('should return 0 for empty URI list', async () => {
+      const count = await service.buildAndTransfer([], null);
+
+      expect(count).toBe(0);
+      expect(mockMcpClient.callTool).not.toHaveBeenCalled();
+    });
+
+    it('should respect concurrency limit', async () => {
+      const files = Array.from({ length: 10 }, (_, i) => ({
+        path: `/workspace/src/file${i}.ts`,
+        content: `const x${i} = ${i};`,
+        mtime: new Date('2024-01-01T00:00:00Z').getTime() + i * 86400000,
+      }));
+      const uris = setupMultipleFiles(files);
+
+      let concurrent = 0;
+      let maxConcurrent = 0;
+
+      mockMcpClient.callTool.mockImplementation(async () => {
+        concurrent++;
+        maxConcurrent = Math.max(maxConcurrent, concurrent);
+        await new Promise((r) => setTimeout(r, 10));
+        concurrent--;
+      });
+
+      await service.buildAndTransfer(uris, null, 3);
+
+      expect(maxConcurrent).toBeLessThanOrEqual(3);
+      expect(mockMcpClient.callTool).toHaveBeenCalledTimes(10);
+    });
+
+    it('should continue processing when individual files fail', async () => {
+      const encoder = new TextEncoder();
+
+      mockStat.mockImplementation((u: any) => {
+        if (u.fsPath === '/workspace/src/bad.ts') {
+          return Promise.reject(new Error('Permission denied'));
+        }
+        return Promise.resolve({
+          mtime: new Date('2024-01-02T00:00:00Z').getTime(),
+        });
+      });
+
+      mockReadFile.mockImplementation((u: any) => {
+        return Promise.resolve(encoder.encode('good content'));
+      });
+
+      mockAsRelativePath.mockImplementation((uri: any) => {
+        const fsPath = typeof uri === 'string' ? uri : uri.fsPath;
+        return fsPath.replace('/workspace/', '');
+      });
+
+      mockMcpClient.callTool.mockResolvedValue(undefined);
+
+      const uris = [
+        makeUri('/workspace/src/good.ts'),
+        makeUri('/workspace/src/bad.ts'),
+        makeUri('/workspace/src/also-good.ts'),
       ];
 
-      await service.transferFilesParallel(payloads);
+      const count = await service.buildAndTransfer(uris, null);
 
+      expect(count).toBe(2);
       expect(mockMcpClient.callTool).toHaveBeenCalledTimes(2);
-      expect(mockMcpClient.callTool).toHaveBeenCalledWith('transfer_file', {
-        path: 'src/a.ts',
-        content: 'const a = 1;',
-        languageId: 'typescript',
-        lastModified: '2024-01-01T00:00:00.000Z',
-      });
-      expect(mockMcpClient.callTool).toHaveBeenCalledWith('transfer_file', {
-        path: 'src/b.ts',
-        content: 'const b = 2;',
-        languageId: 'typescript',
-        lastModified: '2024-01-02T00:00:00.000Z',
-      });
     });
   });
 });

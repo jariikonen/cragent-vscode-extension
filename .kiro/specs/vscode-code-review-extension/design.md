@@ -48,7 +48,7 @@ graph TD
 | `ConnectionManager` | Owns the MCP `Client` instance; handles connect, disconnect, reconnect with backoff |
 | `MCPClient` | Thin wrapper around `@modelcontextprotocol/sdk` `Client` + `StreamableHTTPClientTransport` |
 | `ReviewSessionManager` | Orchestrates review sessions; handles cancellation, progress notifications |
-| `FileTransferService` | Reads workspace files; queries index timestamp; performs parallel file transfers |
+| `FileTransferService` | Reads workspace files; queries index timestamp; performs bounded-concurrency file transfers |
 | `FindingDisplayManager` | Coordinates `CommentController` and `DiagnosticCollection` updates; applies sort/filter logic to displayed findings |
 | `StatusBarManager` | Manages the connection status bar item |
 | `OutputChannelLogger` | Writes structured logs to the "Code Review" output channel |
@@ -65,6 +65,7 @@ Reads from the `codeReview` configuration namespace and exposes a typed settings
 interface ExtensionConfig {
   serverUrl: string;                  // MCP server URL
   requestTimeoutMs: number;           // default: 30000
+  maxConcurrentTransfers: number;     // default: 5, min: 1, max: 50
   showInformationFindings: boolean;   // default: true
   sortField: 'priority' | 'severity' | 'confidence' | 'importance';
   filter: {
@@ -130,7 +131,7 @@ When a new session is triggered for a URI that already has an active session, th
 
 ### FileTransferService
 
-Handles workspace file enumeration and incremental sync.
+Handles workspace file enumeration and incremental sync with bounded concurrency.
 
 ```typescript
 interface IndexTimestampResponse {
@@ -144,17 +145,23 @@ interface FilePayload {
   lastModified: string;       // ISO 8601
 }
 
+const DEFAULT_MAX_CONCURRENT_TRANSFERS = 5;
+
 interface FileTransferService {
   queryIndexTimestamp(): Promise<IndexTimestampResponse>;
-  buildFilePayloads(
+  buildAndTransfer(
     uris: vscode.Uri[],
-    sinceTimestamp: string | null
-  ): Promise<FilePayload[]>;
-  transferFilesParallel(payloads: FilePayload[]): Promise<void>;
+    sinceTimestamp: string | null,
+    concurrency?: number,
+  ): Promise<number>;
 }
 ```
 
-`buildFilePayloads` filters files by `lastModified > sinceTimestamp` when the timestamp is non-null; otherwise it includes all files. Transfers are dispatched with `Promise.all`.
+`buildAndTransfer` implements a fused stat → filter → read → transfer pipeline using a bounded concurrency pool. A fixed number of worker coroutines (controlled by the `concurrency` parameter, default `DEFAULT_MAX_CONCURRENT_TRANSFERS = 5`) pull URIs from a shared index. Each worker stats the file, checks the timestamp filter, reads content only if the file passes, transfers it immediately (so content can be garbage-collected), and moves on. This keeps at most `concurrency` file contents in memory at any time.
+
+The `concurrency` value is read from the `codeReview.maxConcurrentTransfers` configuration setting (integer, min 1, max 50, default 5). The value is floored and clamped to a minimum of 1 at runtime.
+
+Returns the number of files actually transferred. Individual file failures are logged and skipped without aborting the batch.
 
 ### FindingDisplayManager
 
@@ -267,6 +274,13 @@ Results missing any of the required fields (`filePath`, `startLine`, `endLine`, 
     "type": "number",
     "default": 30000,
     "description": "Request timeout in milliseconds."
+  },
+  "codeReview.maxConcurrentTransfers": {
+    "type": "number",
+    "default": 5,
+    "minimum": 1,
+    "maximum": 50,
+    "description": "Maximum number of files transferred to the MCP server in parallel."
   },
   "codeReview.showInformationFindings": {
     "type": "boolean",
@@ -430,7 +444,7 @@ Unit tests cover pure logic with no VS Code API dependencies, using mocks for ex
 **Targets:**
 - `FindingParser`: parsing valid results, skipping invalid results, severity mapping
 - `ConfigurationManager.isLocalAddress`: all three local hostnames, IPv6 variants, remote hostnames
-- `FileTransferService.buildFilePayloads`: timestamp filtering logic (null vs. non-null, boundary conditions)
+- `FileTransferService.buildAndTransfer`: timestamp filtering logic (null vs. non-null, boundary conditions), bounded concurrency pool respects configured limit, individual file failures do not abort the batch
 - `ConnectionManager` reconnection backoff: verify delay sequence and attempt count
 - `ReviewSessionManager` session cancellation: verify old session is cancelled before new one starts
 
@@ -448,7 +462,7 @@ Generate arbitrary `Finding` objects (random numeric `severity`, `confidence`, `
 Generate raw result objects with at least one of `filePath`, `startLine`, `endLine`, `message`, `confidence`, `severity`, `importance`, or `priority` set to `undefined` or omitted (using `fc.record` with optional fields). Assert the parser returns `null` / skips the result and the output finding list is unchanged.
 
 **Property 3 — Incremental Sync Correctness**
-Generate a list of `FilePayload` objects with random `lastModified` ISO timestamps and a random `sinceTimestamp` (or `null`). Assert the filtered list equals exactly the subset with `lastModified > sinceTimestamp` when non-null, or all files when null.
+Generate a list of file descriptors with random `lastModified` timestamps and a random `sinceTimestamp` (or `null`). Call `buildAndTransfer` and assert the number of transferred files equals exactly the subset with `lastModified > sinceTimestamp` when non-null, or all files when null. Verify no file with `lastModified <= sinceTimestamp` appears in the transfer calls.
 
 **Property 4 — Information Finding Filter**
 Generate lists of `Finding` objects with random numeric `severity` scores in [0.0, 1.0] (using `fc.array` with `fc.float({ min: 0, max: 1 })`). Assert that when `showInformationFindings = false`, the filtered list contains no findings with `severity <= 0.33` and all findings with `severity > 0.33` are preserved.
@@ -483,7 +497,7 @@ Integration tests run against a local mock MCP server (an in-process HTTP server
 
 - Full connection lifecycle: connect → call tool → disconnect
 - Workspace review with index timestamp: verify only files newer than timestamp are sent
-- Parallel file transfer: verify all files are sent concurrently (mock server records receipt order)
+- Parallel file transfer with bounded concurrency: verify all files are sent and the mock server never receives more than `maxConcurrentTransfers` simultaneous requests
 - Reconnection: simulate server drop; verify client reconnects within expected time
 
 ### VS Code Extension Tests (Extension Test Runner)
