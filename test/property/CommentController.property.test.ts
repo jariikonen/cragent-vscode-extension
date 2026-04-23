@@ -33,11 +33,13 @@ describe('Property 7: Comment Content Fidelity', () => {
     const { Uri } = await import('vscode');
 
     // Generator for arbitrary Finding objects with optional suggestion
-    const findingArbitrary: fc.Arbitrary<Finding> = fc.record({
+    const findingArbitrary: fc.Arbitrary<Finding> = fc.nat({ max: 10000 }).chain((a) =>
+      fc.nat({ max: 10000 }).map((b) => ({ startLine: Math.min(a, b), endLine: Math.max(a, b) }))
+    ).chain((lines) => fc.record({
       id: fc.uuid(),
       filePath: fc.string({ minLength: 1 }),
-      startLine: fc.nat({ max: 10000 }),
-      endLine: fc.nat({ max: 10000 }),
+      startLine: fc.constant(lines.startLine),
+      endLine: fc.constant(lines.endLine),
       message: fc.string({ minLength: 1 }),
       suggestion: fc.option(fc.string({ minLength: 1 }), { nil: undefined }),
       confidence: fc.float({ min: 0, max: 1, noNaN: true }),
@@ -45,7 +47,7 @@ describe('Property 7: Comment Content Fidelity', () => {
       importance: fc.float({ min: 0, max: 1, noNaN: true }),
       priority: fc.float({ min: 0, max: 1, noNaN: true }),
       dismissed: fc.boolean(),
-    }) as fc.Arbitrary<Finding>;
+    }) as fc.Arbitrary<Finding>);
 
     fc.assert(
       fc.property(findingArbitrary, (finding) => {
