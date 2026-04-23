@@ -95,11 +95,11 @@
 - Add unit tests for session creation, cancellation, and replacement logic
 - All tests passing"`
 
-- [ ] 8. Finding display — diagnostics
-  - [ ] 8.1 Create `src/display/DiagnosticCollection.ts` wrapping `vscode.languages.createDiagnosticCollection("codeReview")`; expose `setFindings(uri, findings)` which converts each `Finding` to a `vscode.Diagnostic` (using `mapSeverity` for severity, 0-indexed line range, message as diagnostic message); expose `clearUri(uri)` and `clearAll()`; implement `dispose()`
-  - [ ] 8.2 Write unit tests in `test/unit/DiagnosticCollection.test.ts` covering: `setFindings` produces one diagnostic per finding, each diagnostic has the correct range and severity, `clearUri` removes only that URI's diagnostics, `clearAll` removes all diagnostics (mock `vscode.languages.createDiagnosticCollection`)
-  - [ ] 8.3 Verify: `npx vitest run test/unit/DiagnosticCollection.test.ts` passes
-  - [ ] 8.4 Commit: `git add src/display/DiagnosticCollection.ts test/unit/DiagnosticCollection.test.ts && git commit -m "feat(display): implement DiagnosticCollection for Problems panel integration
+- [x] 8. Finding display — diagnostics
+  - [x] 8.1 Create `src/display/DiagnosticCollection.ts` wrapping `vscode.languages.createDiagnosticCollection("codeReview")`; expose `setFindings(uri, findings)` which converts each `Finding` to a `vscode.Diagnostic` (using `mapSeverity` for severity, 0-indexed line range, message as diagnostic message); expose `clearUri(uri)` and `clearAll()`; implement `dispose()`
+  - [x] 8.2 Write unit tests in `test/unit/DiagnosticCollection.test.ts` covering: `setFindings` produces one diagnostic per finding, each diagnostic has the correct range and severity, `clearUri` removes only that URI's diagnostics, `clearAll` removes all diagnostics (mock `vscode.languages.createDiagnosticCollection`)
+  - [x] 8.3 Verify: `npx vitest run test/unit/DiagnosticCollection.test.ts` passes
+  - [x] 8.4 Commit: `git add src/display/DiagnosticCollection.ts test/unit/DiagnosticCollection.test.ts && git commit -m "feat(display): implement DiagnosticCollection for Problems panel integration
 
 - Add DiagnosticCollection wrapping vscode.languages.createDiagnosticCollection
 - Implement setFindings() to convert Finding objects to vscode.Diagnostic entries
