@@ -79,11 +79,11 @@
 - Add Property 3 test for incremental sync correctness with random timestamps
 - All tests passing"`
 
-- [ ] 7. Review session management
-  - [ ] 7.1 Create `src/review/ReviewSessionManager.ts` implementing `ReviewSessionManager`; `startSession(scope)` creates a `ReviewSession` with a unique `id` and `CancellationTokenSource`; if a session already exists for the same URI, cancels it before starting the new one; calls `FileTransferService.buildAndTransfer` to send files (passing the configured `maxConcurrentTransfers` as the concurrency limit) and then calls the MCP review tool; shows a VS Code progress notification while the session runs; on completion calls `FindingDisplayManager.applyFindings`; on cancellation or error, logs to `OutputChannelLogger` and shows appropriate notification
-  - [ ] 7.2 Write unit tests in `test/unit/ReviewSessionManager.test.ts` covering: starting a session for a URI that has no active session creates a new session, starting a session for a URI with an existing active session cancels the old session first, `cancelSession(uri)` cancels the session for that URI, `cancelSession()` with no argument cancels all active sessions
-  - [ ] 7.3 Verify: `npx vitest run test/unit/ReviewSessionManager.test.ts` passes
-  - [ ] 7.4 Commit: `git add src/review/ReviewSessionManager.ts test/unit/ReviewSessionManager.test.ts && git commit -m "feat(review): implement ReviewSessionManager with session orchestration
+- [x] 7. Review session management
+  - [x] 7.1 Create `src/review/ReviewSessionManager.ts` implementing `ReviewSessionManager`; `startSession(scope)` creates a `ReviewSession` with a unique `id` and `CancellationTokenSource`; if a session already exists for the same URI, cancels it before starting the new one; calls `FileTransferService.buildAndTransfer` to send files (passing the configured `maxConcurrentTransfers` as the concurrency limit) and then calls the MCP review tool; shows a VS Code progress notification while the session runs; on completion calls `FindingDisplayManager.applyFindings`; on cancellation or error, logs to `OutputChannelLogger` and shows appropriate notification
+  - [x] 7.2 Write unit tests in `test/unit/ReviewSessionManager.test.ts` covering: starting a session for a URI that has no active session creates a new session, starting a session for a URI with an existing active session cancels the old session first, `cancelSession(uri)` cancels the session for that URI, `cancelSession()` with no argument cancels all active sessions
+  - [x] 7.3 Verify: `npx vitest run test/unit/ReviewSessionManager.test.ts` passes
+  - [x] 7.4 Commit: `git add src/review/ReviewSessionManager.ts test/unit/ReviewSessionManager.test.ts && git commit -m "feat(review): implement ReviewSessionManager with session orchestration
 
 - Add ReviewSessionManager for review session lifecycle management
 - Implement startSession() with unique session IDs and CancellationTokenSource
