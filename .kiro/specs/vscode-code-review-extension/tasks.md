@@ -62,12 +62,12 @@
 - Add Property 9 test for remote address authentication header logic
 - All tests passing"`
 
-- [ ] 6. File transfer service
-  - [ ] 6.1 Create `src/review/FileTransferService.ts` implementing `FileTransferService`; `queryIndexTimestamp()` calls the MCP tool to retrieve the index timestamp and returns `{ timestamp: string | null }`; `buildFilePayloads(uris, sinceTimestamp)` reads each file's content and `lastModified` time, filters to only files with `lastModified > sinceTimestamp` when non-null (includes all when null), and returns `FilePayload[]`; `transferFilesParallel(payloads)` dispatches all transfers with `Promise.all`
-  - [ ] 6.2 Write unit tests in `test/unit/FileTransferService.test.ts` covering: `buildFilePayloads` with `sinceTimestamp = null` includes all files, with a timestamp includes only newer files, with a timestamp equal to a file's `lastModified` excludes that file (strictly after), empty URI list returns empty array
-  - [ ] 6.3 Write property-based test for **Property 3 — Incremental Sync Correctness**: generate a list of `FilePayload` objects with random ISO timestamps and a random `sinceTimestamp` (or `null`), assert the filtered list equals exactly the subset with `lastModified > sinceTimestamp` when non-null, or all files when null. Tag: `// Feature: vscode-code-review-extension, Property 3: Incremental Sync Correctness`. Validates: Requirements 2.5
-  - [ ] 6.4 Verify: `npx vitest run test/unit/FileTransferService.test.ts test/property/` passes
-  - [ ] 6.5 Commit: `git add src/review/FileTransferService.ts test/unit/FileTransferService.test.ts test/property/ && git commit -m "feat(review): implement FileTransferService with incremental sync
+- [x] 6. File transfer service
+  - [x] 6.1 Create `src/review/FileTransferService.ts` implementing `FileTransferService`; `queryIndexTimestamp()` calls the MCP tool to retrieve the index timestamp and returns `{ timestamp: string | null }`; `buildFilePayloads(uris, sinceTimestamp)` reads each file's content and `lastModified` time, filters to only files with `lastModified > sinceTimestamp` when non-null (includes all when null), and returns `FilePayload[]`; `transferFilesParallel(payloads)` dispatches all transfers with `Promise.all`
+  - [x] 6.2 Write unit tests in `test/unit/FileTransferService.test.ts` covering: `buildFilePayloads` with `sinceTimestamp = null` includes all files, with a timestamp includes only newer files, with a timestamp equal to a file's `lastModified` excludes that file (strictly after), empty URI list returns empty array
+  - [x] 6.3 Write property-based test for **Property 3 — Incremental Sync Correctness**: generate a list of `FilePayload` objects with random ISO timestamps and a random `sinceTimestamp` (or `null`), assert the filtered list equals exactly the subset with `lastModified > sinceTimestamp` when non-null, or all files when null. Tag: `// Feature: vscode-code-review-extension, Property 3: Incremental Sync Correctness`. Validates: Requirements 2.5
+  - [x] 6.4 Verify: `npx vitest run test/unit/FileTransferService.test.ts test/property/` passes
+  - [x] 6.5 Commit: `git add src/review/FileTransferService.ts test/unit/FileTransferService.test.ts test/property/ && git commit -m "feat(review): implement FileTransferService with incremental sync
 
 - Add FileTransferService for workspace file enumeration and transfer
 - Implement queryIndexTimestamp() to retrieve server-side index timestamp
