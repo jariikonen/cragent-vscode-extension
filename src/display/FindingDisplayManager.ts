@@ -48,7 +48,11 @@ export class FindingDisplayManager {
   ) {
     this.commentController = commentController;
     this.diagnosticCollection = diagnosticCollection;
-    this.options = { ...DEFAULT_OPTIONS, ...options };
+    this.options = {
+      ...DEFAULT_OPTIONS,
+      ...options,
+      filter: { ...DEFAULT_OPTIONS.filter, ...options?.filter },
+    };
   }
 
   /**
@@ -95,10 +99,10 @@ export class FindingDisplayManager {
    * findings across all URIs without requiring a new review session.
    */
   updateSortFilter(options: Partial<FindingSortFilterOptions>): void {
-    this.options = { ...this.options, ...options };
-    if (options.filter) {
-      this.options.filter = { ...this.options.filter, ...options.filter };
-    }
+    const newFilter = options.filter
+      ? { ...this.options.filter, ...options.filter }
+      : this.options.filter;
+    this.options = { ...this.options, ...options, filter: newFilter };
 
     // Re-apply to all stored URIs
     for (const [, entry] of this.findingsByUri) {
