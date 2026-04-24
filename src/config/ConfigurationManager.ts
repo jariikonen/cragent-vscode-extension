@@ -18,6 +18,7 @@ export interface ConfigurationManager {
   getConfig(): ExtensionConfig;
   getAuthToken(): Promise<string | undefined>;
   setAuthToken(token: string): Promise<void>;
+  deleteAuthToken(): Promise<void>;
   onDidChangeConfig(listener: (config: ExtensionConfig) => void): vscode.Disposable;
   isLocalAddress(url: string): boolean;
   validateUrl(url: string): boolean;
@@ -82,6 +83,10 @@ export class DefaultConfigurationManager implements ConfigurationManager {
 
   async setAuthToken(token: string): Promise<void> {
     await this.context.secrets.store('codeReview.authToken', token);
+  }
+
+  async deleteAuthToken(): Promise<void> {
+    await this.context.secrets.delete('codeReview.authToken');
   }
 
   onDidChangeConfig(listener: (config: ExtensionConfig) => void): vscode.Disposable {

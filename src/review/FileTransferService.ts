@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { MCPClient } from '../connection/MCPClient';
+import { MCPClientInterface } from '../connection/MCPClient';
 import { Logger } from '../ui/OutputChannelLogger';
 
 export interface IndexTimestampResponse {
@@ -32,7 +32,7 @@ export interface FileTransferService {
  */
 export class DefaultFileTransferService implements FileTransferService {
   constructor(
-    private readonly mcpClient: MCPClient,
+    private readonly mcpClient: MCPClientInterface,
     private readonly logger: Logger,
   ) {}
 

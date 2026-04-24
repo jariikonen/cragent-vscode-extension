@@ -1,6 +1,6 @@
 export interface StatusBarItem {
   text: string;
-  tooltip: string | undefined;
+  tooltip: string | { value: string } | undefined;
   show(): void;
   dispose(): void;
 }

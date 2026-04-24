@@ -4,12 +4,24 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 const LOCAL_HOSTNAMES = ['localhost', '127.0.0.1', '::1'];
 
 /**
+ * Interface describing the public surface of an MCP client.
+ * Used to decouple consumers (e.g. FileTransferService) from the concrete class.
+ */
+export interface MCPClientInterface {
+  readonly isConnected: boolean;
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
+  callTool(name: string, args?: Record<string, unknown>): Promise<unknown>;
+  getClient(): unknown | null;
+}
+
+/**
  * Thin wrapper around the MCP SDK Client + StreamableHTTPClientTransport.
  *
  * When an auth token is provided and the server URL is not a local address,
  * an Authorization: Bearer header is attached to every request.
  */
-export class MCPClient {
+export class MCPClient implements MCPClientInterface {
   private client: Client | null = null;
   private transport: StreamableHTTPClientTransport | null = null;
   private _isConnected = false;

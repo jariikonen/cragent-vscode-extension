@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { OutputChannelLogger } from './ui/OutputChannelLogger';
 import { DefaultConfigurationManager } from './config/ConfigurationManager';
 import { DefaultConnectionManager } from './connection/ConnectionManager';
+import { MCPClientInterface } from './connection/MCPClient';
 import { DefaultFileTransferService } from './review/FileTransferService';
 import { DefaultReviewSessionManager } from './review/ReviewSessionManager';
 import { CodeReviewDiagnosticCollection } from './display/DiagnosticCollection';
@@ -22,28 +23,29 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // 4. File transfer service — uses the MCPClient from ConnectionManager
   // We create a proxy that delegates to the current client so reconnections are transparent
+  const mcpClientProxy: MCPClientInterface = {
+    get isConnected() {
+      return connectionManager.getClient()?.isConnected ?? false;
+    },
+    async connect() {
+      await connectionManager.getClient()?.connect();
+    },
+    async disconnect() {
+      await connectionManager.getClient()?.disconnect();
+    },
+    async callTool(name: string, args?: Record<string, unknown>) {
+      const client = connectionManager.getClient();
+      if (!client) {
+        throw new Error('MCPClient is not connected');
+      }
+      return client.callTool(name, args);
+    },
+    getClient() {
+      return connectionManager.getClient()?.getClient() ?? null;
+    },
+  };
   const fileTransferService = new DefaultFileTransferService(
-    {
-      get isConnected() {
-        return connectionManager.getClient()?.isConnected ?? false;
-      },
-      async connect() {
-        await connectionManager.getClient()?.connect();
-      },
-      async disconnect() {
-        await connectionManager.getClient()?.disconnect();
-      },
-      async callTool(name: string, args?: Record<string, unknown>) {
-        const client = connectionManager.getClient();
-        if (!client) {
-          throw new Error('MCPClient is not connected');
-        }
-        return client.callTool(name, args);
-      },
-      getClient() {
-        return connectionManager.getClient()?.getClient() ?? null;
-      },
-    } as any,
+    mcpClientProxy,
     logger,
   );
 
@@ -72,7 +74,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // 7. Status bar
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-  const statusBarManager = new StatusBarManager(statusBarItem as any);
+  const statusBarManager = new StatusBarManager(statusBarItem);
 
   // Wire connection state changes to status bar
   const connectionDisposable = connectionManager.onDidChangeConnection((connected) => {
@@ -144,9 +146,35 @@ export function activate(context: vscode.ExtensionContext): void {
       placeHolder: 'Authentication token',
       ignoreFocusOut: true,
     });
-    if (token !== undefined) {
-      await configManager.setAuthToken(token);
-      vscode.window.showInformationMessage('Code Review: Authentication token saved.');
+    if (token === undefined) {
+      return; // User pressed Escape
+    }
+    const trimmed = token.trim();
+    if (trimmed.length === 0) {
+      const confirm = await vscode.window.showWarningMessage(
+        'Code Review: Empty token entered. Do you want to clear the saved authentication token?',
+        'Clear Token',
+        'Cancel',
+      );
+      if (confirm === 'Clear Token') {
+        await configManager.deleteAuthToken();
+        vscode.window.showInformationMessage('Code Review: Authentication token cleared.');
+      }
+      return;
+    }
+    await configManager.setAuthToken(trimmed);
+    vscode.window.showInformationMessage('Code Review: Authentication token saved.');
+  });
+
+  const clearAuthTokenCmd = vscode.commands.registerCommand('codeReview.clearAuthToken', async () => {
+    const confirm = await vscode.window.showWarningMessage(
+      'Code Review: Are you sure you want to remove the saved authentication token?',
+      'Remove Token',
+      'Cancel',
+    );
+    if (confirm === 'Remove Token') {
+      await configManager.deleteAuthToken();
+      vscode.window.showInformationMessage('Code Review: Authentication token removed.');
     }
   });
 
@@ -168,6 +196,7 @@ export function activate(context: vscode.ExtensionContext): void {
     clearFindingsCmd,
     dismissThreadCmd,
     setAuthTokenCmd,
+    clearAuthTokenCmd,
     openOutputChannelCmd,
     { dispose: () => statusBarManager.dispose() },
     { dispose: () => commentController.dispose() },
@@ -191,6 +220,9 @@ export function activate(context: vscode.ExtensionContext): void {
         });
       }
     }
+  }).catch((err) => {
+    logger.log('error', `Initial connection failed: ${err}`);
+    statusBarManager.setDisconnected();
   });
 
   logger.log('info', 'Code Review extension activated');

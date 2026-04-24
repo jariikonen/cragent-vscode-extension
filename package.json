@@ -41,6 +41,10 @@
         "title": "Code Review: Set Authentication Token"
       },
       {
+        "command": "codeReview.clearAuthToken",
+        "title": "Code Review: Remove Authentication Token"
+      },
+      {
         "command": "codeReview.openOutputChannel",
         "title": "Code Review: Open Output Channel"
       }
