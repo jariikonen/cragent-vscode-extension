@@ -185,13 +185,13 @@
 - Add initial connection attempt and remote auth token warning
 - Verify all commands appear in Command Palette"`
 
-- [ ] 13. Integration tests
-  - [ ] 13.1 Create `test/integration/connection.test.ts`: start an in-process mock HTTP MCP server in `beforeAll`; test full connection lifecycle (connect → call tool → disconnect); verify `ConnectionManager.isConnected` transitions correctly
-  - [ ] 13.2 Create `test/integration/fileTransfer.test.ts`: test workspace review with a non-null index timestamp — verify only files with `lastModified` after the timestamp are sent to the mock server; test with `null` timestamp — verify all files are sent
-  - [ ] 13.3 Create `test/integration/parallelTransfer.test.ts`: mock server tracks concurrent request count; send multiple files via `buildAndTransfer` with a specific concurrency limit; assert all transfers complete, the mock server received all payloads, and the maximum concurrent requests never exceeded the configured concurrency limit
-  - [ ] 13.4 Create `test/integration/reconnection.test.ts`: simulate server drop by stopping the mock server mid-session; verify `ConnectionManager` attempts reconnect up to 3 times with the correct backoff delays (1 s, 2 s, 4 s) before emitting a failure
-  - [ ] 13.5 Verify: `npx vitest run test/integration/` passes all integration tests
-  - [ ] 13.6 Commit: `git add test/integration/ && git commit -m "test(integration): add integration tests for MCP connection and file transfer
+- [x] 13. Integration tests
+  - [x] 13.1 Create `test/integration/connection.test.ts`: start an in-process mock HTTP MCP server in `beforeAll`; test full connection lifecycle (connect → call tool → disconnect); verify `ConnectionManager.isConnected` transitions correctly
+  - [x] 13.2 Create `test/integration/fileTransfer.test.ts`: test workspace review with a non-null index timestamp — verify only files with `lastModified` after the timestamp are sent to the mock server; test with `null` timestamp — verify all files are sent
+  - [x] 13.3 Create `test/integration/parallelTransfer.test.ts`: mock server tracks concurrent request count; send multiple files via `buildAndTransfer` with a specific concurrency limit; assert all transfers complete, the mock server received all payloads, and the maximum concurrent requests never exceeded the configured concurrency limit
+  - [x] 13.4 Create `test/integration/reconnection.test.ts`: simulate server drop by stopping the mock server mid-session; verify `ConnectionManager` attempts reconnect up to 3 times with the correct backoff delays (1 s, 2 s, 4 s) before emitting a failure
+  - [x] 13.5 Verify: `npx vitest run test/integration/` passes all integration tests
+  - [x] 13.6 Commit: `git add test/integration/ && git commit -m "test(integration): add integration tests for MCP connection and file transfer
 
 - Add connection.test.ts for full connection lifecycle with mock HTTP MCP server
 - Add fileTransfer.test.ts for incremental sync with null and non-null timestamps
