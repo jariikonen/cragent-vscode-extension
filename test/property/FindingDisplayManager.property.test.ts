@@ -106,7 +106,7 @@ describe('Property 4: Information Finding Filter', () => {
 
     fc.assert(
       fc.property(fc.array(findingArbitrary(), { minLength: 0, maxLength: 30 }), (findings) => {
-        const { mockCommentController, mockDiagnosticCollection, commentCalls } = createMocks();
+        const { mockCommentController, mockDiagnosticCollection, commentCalls, diagnosticCalls } = createMocks();
 
         const manager = new FindingDisplayManager(
           mockCommentController as any,
@@ -117,19 +117,25 @@ describe('Property 4: Information Finding Filter', () => {
         const uri = Uri.file('/test/file.ts');
         manager.applyFindings(uri, findings);
 
-        const displayed = commentCalls[0]?.findings ?? [];
+        const commentDisplayed = commentCalls[0]?.findings ?? [];
+        const diagnosticDisplayed = diagnosticCalls[0]?.findings ?? [];
 
-        // No finding with severity <= 0.33 should be present
-        for (const f of displayed) {
+        // No finding with severity <= 0.33 should be present in either surface
+        for (const f of commentDisplayed) {
+          expect(f.severity).toBeGreaterThan(0.33);
+        }
+        for (const f of diagnosticDisplayed) {
           expect(f.severity).toBeGreaterThan(0.33);
         }
 
-        // All findings with severity > 0.33 should be preserved
+        // All findings with severity > 0.33 should be preserved in both surfaces
         const expectedIds = new Set(
           findings.filter((f) => f.severity > 0.33).map((f) => f.id),
         );
-        const displayedIds = new Set(displayed.map((f) => f.id));
-        expect(displayedIds).toEqual(expectedIds);
+        const commentIds = new Set(commentDisplayed.map((f) => f.id));
+        const diagnosticIds = new Set(diagnosticDisplayed.map((f) => f.id));
+        expect(commentIds).toEqual(expectedIds);
+        expect(diagnosticIds).toEqual(expectedIds);
       }),
       { numRuns: 100 },
     );
