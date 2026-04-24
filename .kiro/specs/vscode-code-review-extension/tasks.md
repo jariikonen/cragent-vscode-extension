@@ -164,9 +164,9 @@
 - Add unit tests for text/tooltip updates and disposal
 - All tests passing"`
 
-- [ ] 12. VS Code commands wiring
-  - [ ] 12.1 Flesh out `src/extension.ts` `activate(context)`: instantiate all services (`OutputChannelLogger`, `ConfigurationManager`, `MCPClient`, `ConnectionManager`, `FileTransferService`, `ReviewSessionManager`, `DiagnosticCollection`, `CommentController`, `FindingDisplayManager`, `StatusBarManager`); wire `ConnectionManager.onDidChangeConnection` to `StatusBarManager`; register all commands listed below; push all disposables to `context.subscriptions`; call `ConnectionManager.connect()` and show a one-time auth warning if the URL is remote and no token is set; pass `ConfigurationManager.getConfig().maxConcurrentTransfers` to `ReviewSessionManager` for use with `FileTransferService.buildAndTransfer`
-  - [ ] 12.2 Register the following commands in `package.json` `contributes.commands` and in `extension.ts`:
+- [x] 12. VS Code commands wiring
+  - [x] 12.1 Flesh out `src/extension.ts` `activate(context)`: instantiate all services (`OutputChannelLogger`, `ConfigurationManager`, `MCPClient`, `ConnectionManager`, `FileTransferService`, `ReviewSessionManager`, `DiagnosticCollection`, `CommentController`, `FindingDisplayManager`, `StatusBarManager`); wire `ConnectionManager.onDidChangeConnection` to `StatusBarManager`; register all commands listed below; push all disposables to `context.subscriptions`; call `ConnectionManager.connect()` and show a one-time auth warning if the URL is remote and no token is set; pass `ConfigurationManager.getConfig().maxConcurrentTransfers` to `ReviewSessionManager` for use with `FileTransferService.buildAndTransfer`
+  - [x] 12.2 Register the following commands in `package.json` `contributes.commands` and in `extension.ts`:
     - `codeReview.reviewFile` — "Code Review: Review Current File" → `ReviewSessionManager.startSession({ kind: 'file', uri })`
     - `codeReview.reviewSelection` — "Code Review: Review Selection" → `ReviewSessionManager.startSession({ kind: 'selection', uri, range })`
     - `codeReview.reviewWorkspace` — "Code Review: Review Workspace" → `ReviewSessionManager.startSession({ kind: 'workspace' })`
@@ -174,8 +174,8 @@
     - `codeReview.dismissThread` — "Code Review: Dismiss" (context menu on `codeReviewFinding`) → `FindingDisplayManager.dismissThread(thread)`
     - `codeReview.setAuthToken` — "Code Review: Set Authentication Token" → `ConfigurationManager.setAuthToken(token)` (prompt via `vscode.window.showInputBox`)
     - `codeReview.openOutputChannel` — "Code Review: Open Output Channel" → `OutputChannelLogger.show()`
-  - [ ] 12.3 Verify: `npm run compile` succeeds with no errors; open the Extension Development Host (`F5`) and confirm all 7 commands appear in the Command Palette under "Code Review"
-  - [ ] 12.4 Commit: `git add src/extension.ts package.json && git commit -m "feat(extension): wire all services and commands in activate()
+  - [x] 12.3 Verify: `npm run compile` succeeds with no errors; open the Extension Development Host (`F5`) and confirm all 7 commands appear in the Command Palette under "Code Review"
+  - [x] 12.4 Commit: `git add src/extension.ts package.json && git commit -m "feat(extension): wire all services and commands in activate()
 
 - Instantiate all services in activate() with proper dependency injection
 - Wire ConnectionManager.onDidChangeConnection to StatusBarManager for status updates

@@ -45,6 +45,15 @@
         "title": "Code Review: Open Output Channel"
       }
     ],
+    "menus": {
+      "comments/commentThread/context": [
+        {
+          "command": "codeReview.dismissThread",
+          "group": "inline",
+          "when": "commentThread =~ /codeReviewFinding/"
+        }
+      ]
+    },
     "configuration": {
       "title": "Code Review",
       "properties": {
