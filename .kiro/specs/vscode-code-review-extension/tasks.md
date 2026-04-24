@@ -150,11 +150,11 @@
 - Add Property 12 test for filter threshold correctness (all scores meet thresholds)
 - All tests passing"`
 
-- [ ] 11. Status bar
-  - [ ] 11.1 Create `src/ui/StatusBarManager.ts` implementing `StatusBarManager`; constructor creates a `vscode.StatusBarItem` with `alignment = Left`; `setConnected(serverUrl)` sets text to `"$(check) Code Review: Connected"` and tooltip to the server URL; `setDisconnected()` sets text to `"$(x) Code Review: Disconnected"`; `setReviewing()` sets text to `"$(sync~spin) Code Review: Reviewing…"`; `dispose()` disposes the status bar item; the item is always visible (call `show()` in constructor)
-  - [ ] 11.2 Write unit tests in `test/unit/StatusBarManager.test.ts` covering: `setConnected` sets the correct text and tooltip, `setDisconnected` sets the correct text, `setReviewing` sets the correct text, `dispose` disposes the underlying item (mock `vscode.window.createStatusBarItem`)
-  - [ ] 11.3 Verify: `npx vitest run test/unit/StatusBarManager.test.ts` passes
-  - [ ] 11.4 Commit: `git add src/ui/StatusBarManager.ts test/unit/StatusBarManager.test.ts && git commit -m "feat(ui): implement StatusBarManager for connection status display
+- [x] 11. Status bar
+  - [x] 11.1 Create `src/ui/StatusBarManager.ts` implementing `StatusBarManager`; constructor creates a `vscode.StatusBarItem` with `alignment = Left`; `setConnected(serverUrl)` sets text to `"$(check) Code Review: Connected"` and tooltip to the server URL; `setDisconnected()` sets text to `"$(x) Code Review: Disconnected"`; `setReviewing()` sets text to `"$(sync~spin) Code Review: Reviewing…"`; `dispose()` disposes the status bar item; the item is always visible (call `show()` in constructor)
+  - [x] 11.2 Write unit tests in `test/unit/StatusBarManager.test.ts` covering: `setConnected` sets the correct text and tooltip, `setDisconnected` sets the correct text, `setReviewing` sets the correct text, `dispose` disposes the underlying item (mock `vscode.window.createStatusBarItem`)
+  - [x] 11.3 Verify: `npx vitest run test/unit/StatusBarManager.test.ts` passes
+  - [x] 11.4 Commit: `git add src/ui/StatusBarManager.ts test/unit/StatusBarManager.test.ts && git commit -m "feat(ui): implement StatusBarManager for connection status display
 
 - Add StatusBarManager wrapping vscode.StatusBarItem with left alignment
 - Implement setConnected() with check icon and server URL tooltip
