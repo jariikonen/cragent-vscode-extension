@@ -1,0 +1,19 @@
+# Source files (compiled JS is in out/)
+src/**
+test/**
+tsconfig.json
+
+# Dev / build tooling
+.gitignore
+.kiro/**
+*.vsix
+
+# Test and config artifacts
+coverage/**
+.vscode-test/**
+.nyc_output/**
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

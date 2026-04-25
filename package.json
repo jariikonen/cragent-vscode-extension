@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "publisher": "code-review",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.89.0"
   },
   "categories": [
     "Linters"
@@ -41,10 +41,23 @@
         "title": "Code Review: Set Authentication Token"
       },
       {
+        "command": "codeReview.clearAuthToken",
+        "title": "Code Review: Remove Authentication Token"
+      },
+      {
         "command": "codeReview.openOutputChannel",
         "title": "Code Review: Open Output Channel"
       }
     ],
+    "menus": {
+      "comments/commentThread/context": [
+        {
+          "command": "codeReview.dismissThread",
+          "group": "inline",
+          "when": "commentThread =~ /codeReviewFinding/"
+        }
+      ]
+    },
     "configuration": {
       "title": "Code Review",
       "properties": {
@@ -57,6 +70,13 @@
           "type": "number",
           "default": 30000,
           "description": "Request timeout in milliseconds."
+        },
+        "codeReview.maxConcurrentTransfers": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Maximum number of files transferred to the MCP server in parallel."
         },
         "codeReview.showInformationFindings": {
           "type": "boolean",
@@ -76,50 +96,53 @@
         },
         "codeReview.filter.minPriority": {
           "type": "number",
-          "default": 0.0,
-          "minimum": 0.0,
-          "maximum": 1.0,
+          "default": 0,
+          "minimum": 0,
+          "maximum": 1,
           "description": "Minimum priority score threshold (0.0-1.0)."
         },
         "codeReview.filter.minSeverity": {
           "type": "number",
-          "default": 0.0,
-          "minimum": 0.0,
-          "maximum": 1.0,
+          "default": 0,
+          "minimum": 0,
+          "maximum": 1,
           "description": "Minimum severity score threshold (0.0-1.0)."
         },
         "codeReview.filter.minConfidence": {
           "type": "number",
-          "default": 0.0,
-          "minimum": 0.0,
-          "maximum": 1.0,
+          "default": 0,
+          "minimum": 0,
+          "maximum": 1,
           "description": "Minimum confidence score threshold (0.0-1.0)."
         },
         "codeReview.filter.minImportance": {
           "type": "number",
-          "default": 0.0,
-          "minimum": 0.0,
-          "maximum": 1.0,
+          "default": 0,
+          "minimum": 0,
+          "maximum": 1,
           "description": "Minimum importance score threshold (0.0-1.0)."
         }
       }
     }
   },
   "scripts": {
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "compile": "node esbuild.mjs",
+    "compile:types": "tsc -p ./ --noEmit",
+    "watch": "node esbuild.mjs --watch",
     "lint": "eslint src --ext ts",
     "test": "vitest run",
-    "test:extension": "vscode-test"
+    "test:extension": "vscode-test",
+    "package": "node esbuild.mjs --production"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@types/node": "^20.0.0",
+    "@types/node": "^25.6.0",
     "@types/vscode": "^1.85.0",
-    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.3.8",
-    "fast-check": "^3.15.0",
-    "typescript": "^5.3.0",
-    "vitest": "^1.2.0"
+    "esbuild": "^0.28.0",
+    "fast-check": "^4.7.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
   }
 }
