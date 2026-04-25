@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { Finding } from '../models/Finding';
-import { CodeReviewCommentController } from './CommentController';
-import { CodeReviewDiagnosticCollection } from './DiagnosticCollection';
+import { Finding } from '../models/Finding.js';
+import { CodeReviewCommentController } from './CommentController.js';
+import { CodeReviewDiagnosticCollection } from './DiagnosticCollection.js';
 
 /**
  * Sort/filter options for controlling how findings are displayed.

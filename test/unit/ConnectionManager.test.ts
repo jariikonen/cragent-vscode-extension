@@ -24,7 +24,7 @@ vi.mock('vscode', () => ({
   window: {
     showErrorMessage: mockShowErrorMessage,
   },
-  EventEmitter: vi.fn().mockImplementation(() => mockEventEmitter),
+  EventEmitter: vi.fn().mockImplementation(function() { return mockEventEmitter; }),
 }));
 
 // Mock MCPClient
@@ -32,12 +32,12 @@ const mockConnect = vi.fn();
 const mockDisconnect = vi.fn();
 
 vi.mock('../../src/connection/MCPClient', () => ({
-  MCPClient: vi.fn().mockImplementation(() => ({
+  MCPClient: vi.fn().mockImplementation(function() { return {
     connect: mockConnect,
     disconnect: mockDisconnect,
     isConnected: false,
     getClient: vi.fn().mockReturnValue(null),
-  })),
+  }; }),
 }));
 
 describe('ConnectionManager', () => {

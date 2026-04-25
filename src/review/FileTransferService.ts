@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { MCPClientInterface } from '../connection/MCPClient';
-import { Logger } from '../ui/OutputChannelLogger';
+import { MCPClientInterface } from '../connection/MCPClient.js';
+import { Logger } from '../ui/OutputChannelLogger.js';
 
 export interface IndexTimestampResponse {
   timestamp: string | null; // ISO 8601 or null

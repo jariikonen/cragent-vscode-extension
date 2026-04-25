@@ -10,7 +10,7 @@ vi.mock('vscode', () => ({
   window: {
     showErrorMessage: (...args: any[]) => mockShowErrorMessage(...args),
   },
-  EventEmitter: vi.fn().mockImplementation(() => ({
+  EventEmitter: vi.fn().mockImplementation(function() { return {
     fire: vi.fn((value: boolean) => {
       mockEventListeners.forEach((l) => l(value));
     }),
@@ -19,7 +19,7 @@ vi.mock('vscode', () => ({
       return { dispose: vi.fn() };
     }),
     dispose: vi.fn(),
-  })),
+  }; }),
 }));
 
 import { DefaultConnectionManager } from '../../src/connection/ConnectionManager';

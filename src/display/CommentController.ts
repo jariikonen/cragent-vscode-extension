@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Finding } from '../models/Finding';
+import { Finding } from '../models/Finding.js';
 
 /**
  * Formats a Finding's scores into the label string.

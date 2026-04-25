@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Finding, mapSeverity } from '../models/Finding';
+import { Finding, mapSeverity } from '../models/Finding.js';
 
 /**
  * Wraps a VS Code DiagnosticCollection to display code review findings

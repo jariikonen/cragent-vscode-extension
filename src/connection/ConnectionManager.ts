@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { MCPClient } from './MCPClient';
-import { ConfigurationManager } from '../config/ConfigurationManager';
-import { Logger } from '../ui/OutputChannelLogger';
+import { MCPClient } from './MCPClient.js';
+import { ConfigurationManager } from '../config/ConfigurationManager.js';
+import { Logger } from '../ui/OutputChannelLogger.js';
 
 /** Delays between retries (not including the initial attempt). */
 const RETRY_DELAYS_MS = [1000, 2000, 4000];

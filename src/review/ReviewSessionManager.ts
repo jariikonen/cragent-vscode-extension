@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import { randomUUID } from 'crypto';
-import { ConnectionManager } from '../connection/ConnectionManager';
-import { FileTransferService } from './FileTransferService';
-import { ConfigurationManager } from '../config/ConfigurationManager';
-import { Finding, parseFinding } from '../models/Finding';
-import { Logger } from '../ui/OutputChannelLogger';
+import { ConnectionManager } from '../connection/ConnectionManager.js';
+import { FileTransferService } from './FileTransferService.js';
+import { ConfigurationManager } from '../config/ConfigurationManager.js';
+import { Finding, parseFinding } from '../models/Finding.js';
+import { Logger } from '../ui/OutputChannelLogger.js';
 
 export type ReviewScope =
   | { kind: 'file'; uri: vscode.Uri }

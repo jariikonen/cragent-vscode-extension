@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
-import { OutputChannelLogger } from './ui/OutputChannelLogger';
-import { DefaultConfigurationManager } from './config/ConfigurationManager';
-import { DefaultConnectionManager } from './connection/ConnectionManager';
-import { MCPClientInterface } from './connection/MCPClient';
-import { DefaultFileTransferService } from './review/FileTransferService';
-import { DefaultReviewSessionManager } from './review/ReviewSessionManager';
-import { CodeReviewDiagnosticCollection } from './display/DiagnosticCollection';
-import { CodeReviewCommentController } from './display/CommentController';
-import { FindingDisplayManager } from './display/FindingDisplayManager';
-import { StatusBarManager } from './ui/StatusBarManager';
+import { OutputChannelLogger } from './ui/OutputChannelLogger.js';
+import { DefaultConfigurationManager } from './config/ConfigurationManager.js';
+import { DefaultConnectionManager } from './connection/ConnectionManager.js';
+import { MCPClientInterface } from './connection/MCPClient.js';
+import { DefaultFileTransferService } from './review/FileTransferService.js';
+import { DefaultReviewSessionManager } from './review/ReviewSessionManager.js';
+import { CodeReviewDiagnosticCollection } from './display/DiagnosticCollection.js';
+import { CodeReviewCommentController } from './display/CommentController.js';
+import { FindingDisplayManager } from './display/FindingDisplayManager.js';
+import { StatusBarManager } from './ui/StatusBarManager.js';
 
 export function activate(context: vscode.ExtensionContext): void {
   // 1. Logging

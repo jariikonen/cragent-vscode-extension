@@ -43,7 +43,7 @@ vi.mock('vscode', () => ({
       toString: () => `file://${path}`,
     }),
   },
-  CancellationTokenSource: vi.fn().mockImplementation(() => {
+  CancellationTokenSource: vi.fn().mockImplementation(function() {
     const source: MockCTS = {
       token: {
         isCancellationRequested: false,
